@@ -5,119 +5,207 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder.functions import IfNull
+from frappe.utils import cstr, get_datetime, get_link_to_form
+
+from erpnext.assets.doctype.asset_activity.asset_activity import add_asset_activity
+
+LOCATION_PURPOSES = ("Receipt", "Transfer", "Transfer and Issue")
+CUSTODIAN_PURPOSES = ("Issue", "Receipt", "Transfer and Issue")
 
 
 class AssetMovement(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		from erpnext.assets.doctype.asset_movement_item.asset_movement_item import AssetMovementItem
+
+		amended_from: DF.Link | None
+		assets: DF.Table[AssetMovementItem]
+		company: DF.Link
+		purpose: DF.Literal["", "Issue", "Receipt", "Transfer", "Transfer and Issue"]
+		reference_doctype: DF.Link | None
+		reference_name: DF.DynamicLink | None
+		transaction_date: DF.Datetime
+	# end: auto-generated types
+
 	def validate(self):
-		self.validate_asset()
-		self.validate_location()
-		self.validate_employee()
-
-	def validate_asset(self):
+		self.validate_duplicate_assets()
 		for d in self.assets:
-			status, company = frappe.db.get_value("Asset", d.asset, ["status", "company"])
-			if self.purpose == 'Transfer' and status in ("Draft", "Scrapped", "Sold"):
-				frappe.throw(_("{0} asset cannot be transferred").format(status))
+			self.validate_asset(d)
+			self.validate_movement(d)
+			self.validate_transaction_date(d)
 
-			if company != self.company:
-				frappe.throw(_("Asset {0} does not belong to company {1}").format(d.asset, self.company))
-
-			if not (d.source_location or d.target_location or d.from_employee or d.to_employee):
-				frappe.throw(_("Either location or employee must be required"))
-
-	def validate_location(self):
+	def validate_duplicate_assets(self):
+		seen_assets = set()
 		for d in self.assets:
-			if self.purpose in ['Transfer', 'Issue']:
-				if not d.source_location:
-					d.source_location = frappe.db.get_value("Asset", d.asset, "location")
+			if d.asset in seen_assets:
+				frappe.throw(_("Row #{0}: Asset {1} is already added in another row").format(d.idx, d.asset))
+			seen_assets.add(d.asset)
 
-				if not d.source_location:
-					frappe.throw(_("Source Location is required for the Asset {0}").format(d.asset))
+	def validate_asset(self, d):
+		status, company, docstatus = frappe.db.get_value("Asset", d.asset, ["status", "company", "docstatus"])
+		if docstatus != 1 or status in ("Scrapped", "Sold", "Capitalized"):
+			frappe.throw(_("Asset {0} is {1} and cannot be moved").format(d.asset, _(status)))
 
-				if d.source_location:
-					current_location = frappe.db.get_value("Asset", d.asset, "location")
+		if company != self.company:
+			frappe.throw(_("Asset {0} does not belong to company {1}").format(d.asset, self.company))
 
-					if current_location != d.source_location:
-						frappe.throw(_("Asset {0} does not belongs to the location {1}").
-							format(d.asset, d.source_location))
+	def validate_movement(self, d):
+		if self.purpose == "Transfer and Issue":
+			self.validate_location_and_employee(d)
+		elif self.purpose in ["Receipt", "Transfer"]:
+			self.validate_location(d)
+		else:
+			self.validate_employee(d)
 
-			if self.purpose == 'Issue':
-				if d.target_location:
-					frappe.throw(_("Issuing cannot be done to a location. \
-						Please enter employee who has issued Asset {0}").format(d.asset), title="Incorrect Movement Purpose")
-				if not d.to_employee:
-					frappe.throw(_("Employee is required while issuing Asset {0}").format(d.asset))
+	def validate_transaction_date(self, d):
+		previous_movement_date = frappe.db.get_value(
+			"Asset Movement",
+			[["Asset Movement Item", "asset", "=", d.asset], ["docstatus", "=", 1]],
+			"transaction_date",
+			order_by="transaction_date desc",
+		)
+		if previous_movement_date and get_datetime(previous_movement_date) > get_datetime(
+			self.transaction_date
+		):
+			frappe.throw(_("Transaction date can't be earlier than previous movement date"))
 
-			if self.purpose == 'Transfer':
-				if d.to_employee:
-					frappe.throw(_("Transferring cannot be done to an Employee. \
-						Please enter location where Asset {0} has to be transferred").format(
-							d.asset), title="Incorrect Movement Purpose")
-				if not d.target_location:
-					frappe.throw(_("Target Location is required while transferring Asset {0}").format(d.asset))
-				if d.source_location == d.target_location:
-					frappe.throw(_("Source and Target Location cannot be same"))
+	def validate_location_and_employee(self, d):
+		self.validate_location(d)
+		self.validate_employee(d)
 
-			if self.purpose == 'Receipt':
-				# only when asset is bought and first entry is made
-				if not d.source_location and not (d.target_location or d.to_employee):
-					frappe.throw(_("Target Location or To Employee is required while receiving Asset {0}").format(d.asset))
-				elif d.source_location:
-					# when asset is received from an employee
-					if d.target_location and not d.from_employee:
-						frappe.throw(_("From employee is required while receiving Asset {0} to a target location").format(d.asset))
-					if d.from_employee and not d.target_location:
-						frappe.throw(_("Target Location is required while receiving Asset {0} from an employee").format(d.asset))
-					if d.to_employee and d.target_location:
-						frappe.throw(_("Asset {0} cannot be received at a location and \
-							given to employee in a single movement").format(d.asset))
+	def validate_location(self, d):
+		if self.purpose in ["Transfer", "Transfer and Issue"]:
+			current_location = frappe.db.get_value("Asset", d.asset, "location")
+			if d.source_location:
+				if current_location != d.source_location:
+					frappe.throw(
+						_("Asset {0} does not belong to the location {1}").format(d.asset, d.source_location)
+					)
+			else:
+				d.source_location = current_location
 
-	def validate_employee(self):
-		for d in self.assets:
-			if d.from_employee:
-					current_custodian = frappe.db.get_value("Asset", d.asset, "custodian")
+			if not d.target_location:
+				frappe.throw(_("Target Location is required for transferring Asset {0}").format(d.asset))
+			if d.source_location == d.target_location:
+				frappe.throw(_("Source and Target Location cannot be same"))
 
-					if current_custodian != d.from_employee:
-						frappe.throw(_("Asset {0} does not belongs to the custodian {1}").
-							format(d.asset, d.from_employee))
-
+		if self.purpose == "Receipt":
+			if not d.target_location:
+				frappe.throw(_("Target Location is required while receiving Asset {0}").format(d.asset))
 			if d.to_employee and frappe.db.get_value("Employee", d.to_employee, "company") != self.company:
-				frappe.throw(_("Employee {0} does not belongs to the company {1}").
-							format(d.to_employee, self.company))
+				frappe.throw(
+					_("Employee {0} does not belong to the company {1}").format(d.to_employee, self.company)
+				)
+
+	def validate_employee(self, d):
+		if self.purpose == "Transfer and Issue":
+			if not d.from_employee:
+				frappe.throw(_("From Employee is required while issuing Asset {0}").format(d.asset))
+
+		if d.from_employee:
+			current_custodian = frappe.db.get_value("Asset", d.asset, "custodian")
+
+			if current_custodian != d.from_employee:
+				frappe.throw(
+					_("Asset {0} does not belong to the custodian {1}").format(d.asset, d.from_employee)
+				)
+
+		if not d.to_employee:
+			frappe.throw(_("Employee is required while issuing Asset {0}").format(d.asset))
+
+		if d.to_employee and frappe.db.get_value("Employee", d.to_employee, "company") != self.company:
+			frappe.throw(
+				_("Employee {0} does not belong to the company {1}").format(d.to_employee, self.company)
+			)
 
 	def on_submit(self):
-		self.set_latest_location_in_asset()
+		self.set_latest_location_and_custodian_in_asset()
 
 	def on_cancel(self):
-		self.set_latest_location_in_asset()
+		self.set_latest_location_and_custodian_in_asset()
 
-	def set_latest_location_in_asset(self):
-		current_location, current_employee = '', ''
-		cond = "1=1"
-
+	def set_latest_location_and_custodian_in_asset(self):
 		for d in self.assets:
-			args = {
-				'asset': d.asset,
-				'company': self.company
-			}
+			current_location, current_employee = self.get_latest_location_and_custodian(d.asset)
+			changed_location, previous_custodian = self.update_asset_location_and_custodian(
+				d.asset, current_location, current_employee
+			)
+			changed_employee = current_employee if previous_custodian is not None else ""
+			self.log_asset_activity(d.asset, changed_location, changed_employee, previous_custodian)
 
-			# latest entry corresponds to current document's location, employee when transaction date > previous dates
-			# In case of cancellation it corresponds to previous latest document's location, employee
-			latest_movement_entry = frappe.db.sql(
-				"""
-				SELECT asm_item.target_location, asm_item.to_employee
-				FROM `tabAsset Movement Item` asm_item, `tabAsset Movement` asm
-				WHERE
-					asm_item.parent=asm.name and
-					asm_item.asset=%(asset)s and
-					asm.company=%(company)s and
-					asm.docstatus=1 and {0}
-				ORDER BY
-					asm.transaction_date desc limit 1
-				""".format(cond), args)
-			if latest_movement_entry:
-				current_location = latest_movement_entry[0][0]
-				current_employee = latest_movement_entry[0][1]
+	def get_latest_location_and_custodian(self, asset):
+		"""Location and custodian each come from the latest submitted movement that sets them."""
+		asm = frappe.qb.DocType("Asset Movement")
+		asm_item = frappe.qb.DocType("Asset Movement Item")
+		location = self.get_latest_movement_value(
+			asset, asm_item.target_location, asm.purpose.isin(LOCATION_PURPOSES)
+		)
+		employee = self.get_latest_movement_value(
+			asset,
+			asm_item.to_employee,
+			asm.purpose.isin(CUSTODIAN_PURPOSES) | (IfNull(asm_item.to_employee, "") != ""),
+		)
+		return location, employee
 
-			frappe.db.set_value('Asset', d.asset, 'location', current_location)
-			frappe.db.set_value('Asset', d.asset, 'custodian', current_employee)
+	def get_latest_movement_value(self, asset: str, field, condition) -> str:
+		asm = frappe.qb.DocType("Asset Movement")
+		asm_item = frappe.qb.DocType("Asset Movement Item")
+		latest_movement_entry = (
+			frappe.qb.from_(asm_item)
+			.inner_join(asm)
+			.on(asm_item.parent == asm.name)
+			.select(field)
+			.where((asm_item.asset == asset) & (asm.company == self.company) & (asm.docstatus == 1))
+			.where(condition)
+			.orderby(asm.transaction_date, order=frappe.qb.desc)
+			.orderby(asm.name, order=frappe.qb.desc)
+			.limit(1)
+			.run()
+		)
+		return latest_movement_entry[0][0] if latest_movement_entry else ""
+
+	def update_asset_location_and_custodian(self, asset_id, location, employee):
+		"""Return the changed location and the previous custodian (None if the custodian is unchanged)."""
+		asset = frappe.get_doc("Asset", asset_id)
+		changed_location, previous_custodian = "", None
+
+		if cstr(employee) != cstr(asset.custodian):
+			frappe.db.set_value("Asset", asset_id, "custodian", cstr(employee))
+			previous_custodian = cstr(asset.custodian)
+		if location and location != asset.location:
+			frappe.db.set_value("Asset", asset_id, "location", location)
+			changed_location = location
+
+		return changed_location, previous_custodian
+
+	def log_asset_activity(self, asset_id, location, employee, previous_custodian=None):
+		if location and employee:
+			add_asset_activity(
+				asset_id,
+				_("Asset received at Location {0} and issued to Employee {1}").format(
+					get_link_to_form("Location", location),
+					get_link_to_form("Employee", employee),
+				),
+			)
+		elif location:
+			add_asset_activity(
+				asset_id,
+				_("Asset transferred to Location {0}").format(get_link_to_form("Location", location)),
+			)
+		elif employee:
+			add_asset_activity(
+				asset_id,
+				_("Asset issued to Employee {0}").format(get_link_to_form("Employee", employee)),
+			)
+		elif previous_custodian:
+			add_asset_activity(
+				asset_id,
+				_("Asset returned by Employee {0}").format(get_link_to_form("Employee", previous_custodian)),
+			)

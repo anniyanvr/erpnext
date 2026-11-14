@@ -1,22 +1,19 @@
-from unittest import TestCase
-
 import frappe
 
 from erpnext.regional.address_template.setup import get_address_templates, update_address_template
+from erpnext.tests.utils import ERPNextTestSuite
 
 
 def ensure_country(country):
 	if frappe.db.exists("Country", country):
 		return frappe.get_doc("Country", country)
 	else:
-		c = frappe.get_doc({
-			"doctype": "Country",
-			"country_name": country
-		})
+		c = frappe.get_doc({"doctype": "Country", "country_name": country})
 		c.insert()
 		return c
 
-class TestRegionalAddressTemplate(TestCase):
+
+class TestRegionalAddressTemplate(ERPNextTestSuite):
 	def test_get_address_templates(self):
 		"""Get the countries and paths from the templates directory."""
 		templates = get_address_templates()
@@ -34,11 +31,9 @@ class TestRegionalAddressTemplate(TestCase):
 		"""Update an existing Address Template."""
 		country = ensure_country("Germany")
 		if not frappe.db.exists("Address Template", country.name):
-			template = frappe.get_doc({
-				"doctype": "Address Template",
-				"country": country.name,
-				"template": "EXISTING"
-			}).insert()
+			frappe.get_doc(
+				{"doctype": "Address Template", "country": country.name, "template": "EXISTING"}
+			).insert()
 
 		update_address_template(country.name, "NEW")
 		doc = frappe.get_doc("Address Template", country.name)

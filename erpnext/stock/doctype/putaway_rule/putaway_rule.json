@@ -2,7 +2,9 @@
  "actions": [],
  "autoname": "PUT-.####",
  "creation": "2020-11-09 11:39:46.489501",
+ "description": "Which warehouse received items go to.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/putaway-rule",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -106,15 +108,18 @@
    "fieldtype": "Float",
    "label": "Conversion Factor",
    "no_copy": 1,
+   "precision": "9",
    "read_only": 1
   }
  ],
+ "icon": "archive",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2020-11-25 20:39:19.973437",
+ "modified": "2026-08-07 17:31:31.732720",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Putaway Rule",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
@@ -130,16 +135,10 @@
    "write": 1
   },
   {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Stock User",
-   "share": 1,
-   "write": 1
+   "role": "Stock User"
   },
   {
    "email": 1,
@@ -153,8 +152,9 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "item_code",
  "track_changes": 1
 }

@@ -4,11 +4,17 @@
 
 import frappe
 from frappe import _, msgprint
-from frappe.utils import date_diff, flt
+from frappe.query_builder.functions import Count, Date
+from frappe.utils import date_diff, flt, parse_addr, split_emails
+
+from erpnext.accounts.report.utils import validate_date_range
 
 
 def execute(filters=None):
-	if not filters: filters = {}
+	validate_date_range(filters)
+
+	if not filters:
+		filters = {}
 
 	communication_list = get_communication_details(filters)
 	columns = get_columns()
@@ -19,8 +25,12 @@ def execute(filters=None):
 
 	data = []
 	for communication in communication_list:
-		row = [communication.get('customer'), communication.get('interactions'),\
-			communication.get('duration'), communication.get('support_tickets')]
+		row = [
+			communication.get("customer"),
+			communication.get("interactions"),
+			communication.get("duration"),
+			communication.get("support_tickets"),
+		]
 		data.append(row)
 
 	# add the average row
@@ -32,8 +42,16 @@ def execute(filters=None):
 		total_interactions += row[1]
 		total_duration += row[2]
 		total_tickets += row[3]
-	data.append(['Average', total_interactions/len(data), total_duration/len(data), total_tickets/len(data)])
+	data.append(
+		[
+			"Average",
+			total_interactions / len(data),
+			total_duration / len(data),
+			total_tickets / len(data),
+		]
+	)
 	return columns, data
+
 
 def get_columns():
 	return [
@@ -42,74 +60,103 @@ def get_columns():
 			"fieldname": "customer",
 			"fieldtype": "Link",
 			"options": "Customer",
-			"width": 120
+			"width": 120,
 		},
 		{
 			"label": _("No of Interactions"),
 			"fieldname": "interactions",
 			"fieldtype": "Float",
-			"width": 120
+			"width": 120,
 		},
-		{
-			"label": _("Duration in Days"),
-			"fieldname": "duration",
-			"fieldtype": "Float",
-			"width": 120
-		},
+		{"label": _("Duration in Days"), "fieldname": "duration", "fieldtype": "Float", "width": 120},
 		{
 			"label": _("Support Tickets"),
 			"fieldname": "support_tickets",
 			"fieldtype": "Float",
-			"width": 120
-		}
+			"width": 120,
+		},
 	]
 
+
 def get_communication_details(filters):
-	communication_count = None
 	communication_list = []
-	opportunities = frappe.db.get_values('Opportunity', {'opportunity_from': 'Lead'},\
-		['name', 'customer_name', 'contact_email'], as_dict=1)
-
-	for d in opportunities:
-		invoice = frappe.db.sql('''
-				SELECT
-					date(creation)
-				FROM
-					`tabSales Invoice`
-				WHERE
-					contact_email = %s AND date(creation) between %s and %s AND docstatus != 2
-				ORDER BY
-					creation
-				LIMIT 1
-			''', (d.contact_email, filters.from_date, filters.to_date))
-
-		if not invoice: continue
-
-		communication_count = frappe.db.sql('''
-				SELECT
-					count(*)
-				FROM
-					`tabCommunication`
-				WHERE
-					sender = %s AND date(communication_date) <= %s
-			''', (d.contact_email, invoice))[0][0]
-
-		if not communication_count: continue
-
-		first_contact = frappe.db.sql('''
-				SELECT
-					date(communication_date)
-				FROM
-					`tabCommunication`
-				WHERE
-					recipients  = %s
-				ORDER BY
-					communication_date
-				LIMIT 1
-			''', (d.contact_email))[0][0]
-
-		duration = flt(date_diff(invoice[0][0], first_contact))
-
-		support_tickets = len(frappe.db.get_all('Issue', {'raised_by': d.contact_email}))
-		communication_list.append({'customer': d.customer_name, 'interactions': communication_count, 'duration': duration, 'support_tickets': support_tickets})
+	converted_leads = set()
+	for opportunity in get_lead_opportunities():
+		if opportunity.party_name in converted_leads:
+			continue
+		row = get_conversion_details(opportunity, filters)
+		if row:
+			converted_leads.add(opportunity.party_name)
+			communication_list.append(row)
 	return communication_list
+
+
+def get_lead_opportunities() -> list[dict]:
+	return frappe.get_list(
+		"Opportunity",
+		filters={"opportunity_from": "Lead"},
+		fields=["party_name", "customer_name", "contact_email"],
+		order_by="creation",
+	)
+
+
+def get_conversion_details(d: dict, filters: dict) -> dict | None:
+	si = frappe.qb.DocType("Sales Invoice")
+	comm = frappe.qb.DocType("Communication")
+
+	invoice = (
+		frappe.qb.from_(si)
+		.select(si.posting_date)
+		.where(
+			(si.contact_email == d.contact_email)
+			& si.posting_date.between(filters.from_date, filters.to_date)
+			& (si.docstatus == 1)
+		)
+		.orderby(si.posting_date)
+		.limit(1)
+		.run()
+	)
+
+	if not invoice:
+		return
+
+	invoice_date = invoice[0][0]
+
+	communication_count = (
+		frappe.qb.from_(comm)
+		.select(Count("*"))
+		.where((comm.sender == d.contact_email) & (Date(comm.communication_date) <= invoice_date))
+		.run()
+	)[0][0]
+
+	if not communication_count:
+		return
+
+	first_contact = get_first_contact_date(d.contact_email)
+	if not first_contact:
+		return
+
+	return {
+		"customer": d.customer_name,
+		"interactions": communication_count,
+		"duration": flt(date_diff(invoice_date, first_contact)),
+		"support_tickets": len(frappe.db.get_all("Issue", {"raised_by": d.contact_email})),
+	}
+
+
+def get_first_contact_date(email: str):
+	comm = frappe.qb.DocType("Communication")
+	communications = (
+		frappe.qb.from_(comm)
+		.select(comm.recipients, Date(comm.communication_date))
+		.where(comm.recipients.like(f"%{email}%") & comm.communication_date.isnotnull())
+		.orderby(comm.communication_date)
+		.run()
+	)
+	for recipients, communication_date in communications:
+		if is_recipient(email, recipients):
+			return communication_date
+
+
+def is_recipient(email: str, recipients: str) -> bool:
+	return any(parse_addr(recipient)[1].lower() == email.lower() for recipient in split_emails(recipients))

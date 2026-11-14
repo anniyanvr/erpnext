@@ -3,9 +3,11 @@
  "creation": "2015-12-23 21:31:52.699821",
  "doctype": "DocType",
  "editable_grid": 1,
+ "engine": "InnoDB",
  "field_order": [
   "payment_gateway",
   "payment_channel",
+  "company",
   "is_default",
   "column_break_4",
   "payment_account",
@@ -48,7 +50,7 @@
    "label": "Currency"
   },
   {
-   "depends_on": "eval: doc.payment_channel !== \"Phone\"",
+   "depends_on": "eval: doc.payment_channel == 'Email' || (!doc.payment_channel)",
    "fieldname": "payment_request_message",
    "fieldtype": "Section Break"
   },
@@ -69,12 +71,23 @@
    "fieldname": "payment_channel",
    "fieldtype": "Select",
    "label": "Payment Channel",
-   "options": "\nEmail\nPhone"
+   "options": "\nEmail\nPhone\nOther"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "print_hide": 1,
+   "remember_last_selected_value": 1,
+   "reqd": 1
   }
  ],
+ "icon": "credit-card",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2020-09-20 13:30:27.722852",
+ "modified": "2025-07-14 16:49:55.210352",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Gateway Account",
@@ -93,6 +106,8 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
- "sort_order": "DESC"
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
 }

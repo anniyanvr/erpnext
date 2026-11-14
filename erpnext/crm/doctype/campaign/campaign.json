@@ -4,9 +4,10 @@
  "allow_rename": 1,
  "autoname": "naming_series:",
  "creation": "2013-01-10 16:34:18",
- "description": "Keep Track of Sales Campaigns. Keep track of Leads, Quotations, Sales Order etc from Campaigns to gauge Return on Investment. ",
+ "description": "A marketing campaign, to see which leads and sales it brought in.",
  "doctype": "DocType",
  "document_type": "Setup",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/campaign",
  "engine": "InnoDB",
  "field_order": [
   "campaign",
@@ -64,10 +65,10 @@
    "width": "300px"
   }
  ],
- "icon": "fa fa-bullhorn",
+ "icon": "megaphone",
  "idx": 1,
  "links": [],
- "modified": "2021-06-30 18:05:06.412712",
+ "modified": "2024-03-27 13:06:43.861206",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Campaign",
@@ -83,7 +84,6 @@
    "read": 1,
    "report": 1,
    "role": "Sales Manager",
-   "set_user_permissions": 1,
    "write": 1
   },
   {
@@ -106,6 +106,7 @@
   }
  ],
  "quick_entry": 1,
- "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
 }

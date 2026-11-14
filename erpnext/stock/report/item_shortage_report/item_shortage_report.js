@@ -1,26 +1,27 @@
 // Copyright (c) 2016, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
-/* eslint-disable */
 
 frappe.query_reports["Item Shortage Report"] = {
-	"filters": [
+	filters: [
 		{
-			"fieldname": "company",
-			"label": __("Company"),
-			"fieldtype": "Link",
-			"width": "80",
-			"options": "Company",
-			"reqd": 1,
-			"default": frappe.defaults.get_default("company")
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			width: "80",
+			options: "Company",
+			reqd: 1,
+			default: frappe.defaults.get_default("company"),
 		},
 		{
-			"fieldname": "warehouse",
-			"label": __("Warehouse"),
-			"fieldtype": "MultiSelectList",
-			"width": "100",
-			get_data: function(txt) {
-				return frappe.db.get_link_options('Warehouse', txt);
-			}
-		}
-	]
+			fieldname: "warehouse",
+			label: __("Warehouse"),
+			fieldtype: "MultiSelectList",
+			options: "Warehouse",
+			width: "100",
+			get_data: function (txt) {
+				let company = frappe.query_report.get_filter_value("company");
+				return erpnext.utils.get_link_options("Warehouse", txt, company ? { company } : {});
+			},
+		},
+	],
 };

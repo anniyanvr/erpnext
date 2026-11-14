@@ -4,8 +4,10 @@
  "allow_rename": 1,
  "autoname": "naming_series:",
  "creation": "2013-02-01 10:36:25",
+ "description": "A problem or question raised by a customer.",
  "doctype": "DocType",
  "document_type": "Setup",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/issue",
  "email_append_to": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -24,12 +26,10 @@
   "service_level_section",
   "service_level_agreement",
   "response_by",
-  "response_by_variance",
   "reset_service_level_agreement",
   "cb",
   "agreement_status",
-  "resolution_by",
-  "resolution_by_variance",
+  "sla_resolution_by",
   "service_level_agreement_creation",
   "on_hold_since",
   "total_hold_time",
@@ -43,7 +43,7 @@
   "column_break1",
   "opening_date",
   "opening_time",
-  "resolution_date",
+  "sla_resolution_date",
   "resolution_time",
   "user_resolution_time",
   "additional_info",
@@ -86,6 +86,7 @@
    "fieldname": "customer",
    "fieldtype": "Link",
    "in_global_search": 1,
+   "in_import_template": 1,
    "label": "Customer",
    "oldfieldname": "customer",
    "oldfieldtype": "Link",
@@ -99,6 +100,7 @@
    "fieldname": "raised_by",
    "fieldtype": "Data",
    "in_global_search": 1,
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Raised By (Email)",
    "oldfieldname": "raised_by",
@@ -113,6 +115,7 @@
    "default": "Open",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_import_template": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
@@ -123,9 +126,9 @@
    "search_index": 1
   },
   {
-   "default": "Medium",
    "fieldname": "priority",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Priority",
@@ -134,6 +137,7 @@
   {
    "fieldname": "issue_type",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "label": "Issue Type",
    "options": "Issue Type"
   },
@@ -148,7 +152,7 @@
    "bold": 1,
    "fieldname": "description",
    "fieldtype": "Text Editor",
-   "in_global_search": 1,
+   "in_import_template": 1,
    "label": "Description",
    "oldfieldname": "problem_description",
    "oldfieldtype": "Text"
@@ -177,13 +181,6 @@
    "fieldname": "cb",
    "fieldtype": "Column Break",
    "options": "fa fa-pushpin",
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval: doc.status != 'Replied' && doc.service_level_agreement;",
-   "fieldname": "resolution_by",
-   "fieldtype": "Datetime",
-   "label": "Resolution By",
    "read_only": 1
   },
   {
@@ -243,6 +240,8 @@
    "options": "Project"
   },
   {
+   "fetch_from": "email_account.company",
+   "fetch_if_empty": 1,
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
@@ -291,16 +290,6 @@
    "read_only": 1
   },
   {
-   "depends_on": "eval:!doc.__islocal",
-   "fieldname": "resolution_date",
-   "fieldtype": "Datetime",
-   "label": "Resolution Date",
-   "no_copy": 1,
-   "oldfieldname": "resolution_date",
-   "oldfieldtype": "Date",
-   "read_only": 1
-  },
-  {
    "fieldname": "content_type",
    "fieldtype": "Data",
    "hidden": 1,
@@ -317,22 +306,6 @@
    "fieldname": "via_customer_portal",
    "fieldtype": "Check",
    "label": "Via Customer Portal"
-  },
-  {
-   "depends_on": "eval: doc.service_level_agreement && doc.status != 'Replied';",
-   "fieldname": "response_by_variance",
-   "fieldtype": "Duration",
-   "hide_seconds": 1,
-   "label": "Response By Variance",
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval: doc.service_level_agreement && doc.status != 'Replied';",
-   "fieldname": "resolution_by_variance",
-   "fieldtype": "Duration",
-   "hide_seconds": 1,
-   "label": "Resolution By Variance",
-   "read_only": 1
   },
   {
    "fieldname": "service_level_agreement_creation",
@@ -391,12 +364,12 @@
    "read_only": 1
   },
   {
-   "default": "Ongoing",
+   "default": "First Response Due",
    "depends_on": "eval: doc.service_level_agreement",
    "fieldname": "agreement_status",
    "fieldtype": "Select",
    "label": "Service Level Agreement Status",
-   "options": "Ongoing\nFulfilled\nFailed",
+   "options": "First Response Due\nResolution Due\nFulfilled\nFailed",
    "read_only": 1
   },
   {
@@ -405,15 +378,33 @@
    "fieldtype": "Duration",
    "label": "First Response Time",
    "read_only": 1
+  },
+  {
+   "depends_on": "eval: doc.status != 'Replied' && doc.service_level_agreement;",
+   "fieldname": "sla_resolution_by",
+   "fieldtype": "Datetime",
+   "label": "Resolution By",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:!doc.__islocal",
+   "fieldname": "sla_resolution_date",
+   "fieldtype": "Datetime",
+   "label": "Resolution Date",
+   "no_copy": 1,
+   "oldfieldname": "resolution_date",
+   "oldfieldtype": "Date",
+   "read_only": 1
   }
  ],
- "icon": "fa fa-ticket",
+ "icon": "ticket",
  "idx": 7,
  "links": [],
- "modified": "2021-06-10 03:22:27.098898",
+ "modified": "2026-10-05 17:10:00.000000",
  "modified_by": "Administrator",
  "module": "Support",
  "name": "Issue",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -426,13 +417,29 @@
    "role": "Support Team",
    "share": 1,
    "write": 1
+  },
+  {
+   "role": "HR Manager",
+   "select": 1
+  },
+  {
+   "role": "HR User",
+   "select": 1
+  },
+  {
+   "role": "Projects User",
+   "select": 1
   }
  ],
  "quick_entry": 1,
+ "recipient_account_field": "email_account",
+ "row_format": "Dynamic",
  "search_fields": "status,customer,subject,raised_by",
  "sender_field": "raised_by",
- "sort_field": "modified",
+ "show_name_in_global_search": 1,
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "subject_field": "subject",
  "timeline_field": "customer",
  "title_field": "subject",

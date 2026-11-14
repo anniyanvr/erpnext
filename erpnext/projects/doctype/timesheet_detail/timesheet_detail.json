@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "creation": "2013-03-05 09:11:06",
  "doctype": "DocType",
  "document_type": "Document",
@@ -14,12 +15,6 @@
   "to_time",
   "hours",
   "completed",
-  "section_break_7",
-  "completed_qty",
-  "workstation",
-  "column_break_12",
-  "operation",
-  "operation_id",
   "project_details",
   "project",
   "project_name",
@@ -84,43 +79,6 @@
    "label": "Completed"
   },
   {
-   "fieldname": "section_break_7",
-   "fieldtype": "Section Break"
-  },
-  {
-   "depends_on": "eval:parent.work_order",
-   "fieldname": "completed_qty",
-   "fieldtype": "Float",
-   "label": "Completed Qty"
-  },
-  {
-   "depends_on": "eval:parent.work_order",
-   "fieldname": "workstation",
-   "fieldtype": "Link",
-   "label": "Workstation",
-   "options": "Workstation",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_12",
-   "fieldtype": "Column Break"
-  },
-  {
-   "depends_on": "eval:parent.work_order",
-   "fieldname": "operation",
-   "fieldtype": "Link",
-   "label": "Operation",
-   "options": "Operation",
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval:parent.work_order",
-   "fieldname": "operation_id",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Operation Id"
-  },
-  {
    "fieldname": "project_details",
    "fieldtype": "Section Break"
   },
@@ -153,7 +111,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "allow_on_submit": 1,
    "depends_on": "is_billable",
    "fieldname": "billing_hours",
    "fieldtype": "Float",
@@ -173,7 +130,6 @@
    "permlevel": 1
   },
   {
-   "allow_on_submit": 1,
    "default": "0",
    "fieldname": "billing_amount",
    "fieldtype": "Currency",
@@ -194,7 +150,6 @@
    "permlevel": 1
   },
   {
-   "allow_on_submit": 1,
    "default": "0",
    "fieldname": "costing_amount",
    "fieldtype": "Currency",
@@ -214,7 +169,6 @@
    "read_only": 1
   },
   {
-   "allow_on_submit": 1,
    "columns": 1,
    "default": "0",
    "fieldname": "is_billable",
@@ -267,13 +221,14 @@
  "idx": 1,
  "istable": 1,
  "links": [],
- "modified": "2021-05-18 12:19:33.205940",
+ "modified": "2026-10-05 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Timesheet Detail",
  "owner": "Administrator",
  "permissions": [],
  "quick_entry": 1,
- "sort_field": "modified",
- "sort_order": "ASC"
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": []
 }

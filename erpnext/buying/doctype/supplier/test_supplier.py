@@ -1,164 +1,422 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
-import unittest
 
 import frappe
-from frappe.test_runner import make_test_records
+from frappe.utils import nowdate
 
 from erpnext.accounts.party import get_due_date
+from erpnext.controllers.website_list_for_contact import get_customers_suppliers
 from erpnext.exceptions import PartyDisabled
-
-test_dependencies = ['Payment Term', 'Payment Terms Template']
-test_records = frappe.get_test_records('Supplier')
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestSupplier(unittest.TestCase):
-    def test_get_supplier_group_details(self):
-        doc = frappe.new_doc("Supplier Group")
-        doc.supplier_group_name = "_Testing Supplier Group"
-        doc.payment_terms = "_Test Payment Term Template 3"
-        doc.accounts = []
-        test_account_details = {
-            "company": "_Test Company",
-            "account": "Creditors - _TC",
-        }
-        doc.append("accounts", test_account_details)
-        doc.save()
-        s_doc = frappe.new_doc("Supplier")
-        s_doc.supplier_name = "Testing Supplier"
-        s_doc.supplier_group = "_Testing Supplier Group"
-        s_doc.payment_terms = ""
-        s_doc.accounts = []
-        s_doc.insert()
-        s_doc.get_supplier_group_details()
-        self.assertEqual(s_doc.payment_terms, "_Test Payment Term Template 3")
-        self.assertEqual(s_doc.accounts[0].company, "_Test Company")
-        self.assertEqual(s_doc.accounts[0].account, "Creditors - _TC")
-        s_doc.delete()
-        doc.delete()
+class TestSupplier(ERPNextTestSuite):
+	def test_get_supplier_group_details(self):
+		doc = frappe.new_doc("Supplier Group")
+		doc.supplier_group_name = "_Testing Supplier Group"
+		doc.payment_terms = "_Test Payment Term Template 3"
+		doc.accounts = []
+		test_account_details = {
+			"company": "_Test Company",
+			"account": "Creditors - _TC",
+		}
+		doc.append("accounts", test_account_details)
+		doc.save()
+		s_doc = frappe.new_doc("Supplier")
+		s_doc.supplier_name = "Testing Supplier"
+		s_doc.supplier_group = "_Testing Supplier Group"
+		s_doc.payment_terms = ""
+		s_doc.accounts = []
+		s_doc.insert()
+		s_doc.get_supplier_group_details()
+		self.assertEqual(s_doc.payment_terms, "_Test Payment Term Template 3")
+		self.assertEqual(s_doc.accounts[0].company, "_Test Company")
+		self.assertEqual(s_doc.accounts[0].account, "Creditors - _TC")
+		s_doc.delete()
+		doc.delete()
 
-    def test_supplier_default_payment_terms(self):
-        # Payment Term based on Days after invoice date
-        frappe.db.set_value(
-            "Supplier", "_Test Supplier With Template 1", "payment_terms", "_Test Payment Term Template 3")
+	def test_supplier_group_details_need_supplier_group_read_permission(self):
+		from erpnext.tests.permission_test_utils import as_user, make_fenced_user
 
-        due_date = get_due_date("2016-01-22", "Supplier", "_Test Supplier With Template 1")
-        self.assertEqual(due_date, "2016-02-21")
+		supplier_group = frappe.get_doc(
+			{
+				"doctype": "Supplier Group",
+				"supplier_group_name": f"_Test Group Details {frappe.generate_hash(length=6)}",
+				"payment_terms": "_Test Payment Term Template 3",
+				"accounts": [{"company": "_Test Company", "account": "Creditors - _TC"}],
+			}
+		).insert()
+		supplier = frappe.new_doc("Supplier")
+		supplier.supplier_name = "_Test Supplier Group Details"
+		supplier.supplier_group = supplier_group.name
 
-        due_date = get_due_date("2017-01-22", "Supplier", "_Test Supplier With Template 1")
-        self.assertEqual(due_date, "2017-02-21")
+		with as_user(make_fenced_user("_test_sgd_stock@example.com", ["Stock User"])):
+			self.assertRaises(frappe.PermissionError, supplier.get_supplier_group_details)
 
-        # Payment Term based on last day of month
-        frappe.db.set_value(
-            "Supplier", "_Test Supplier With Template 1", "payment_terms", "_Test Payment Term Template 1")
+		with as_user(make_fenced_user("_test_sgd_purchase@example.com", ["Purchase Manager"])):
+			supplier.get_supplier_group_details()
+		self.assertEqual(supplier.payment_terms, "_Test Payment Term Template 3")
+		self.assertEqual(
+			[(row.company, row.account) for row in supplier.accounts], [("_Test Company", "Creditors - _TC")]
+		)
 
-        due_date = get_due_date("2016-01-22", "Supplier", "_Test Supplier With Template 1")
-        self.assertEqual(due_date, "2016-02-29")
+	def test_supplier_default_payment_terms(self):
+		# Payment Term based on Days after invoice date
+		frappe.db.set_value(
+			"Supplier", "_Test Supplier With Template 1", "payment_terms", "_Test Payment Term Template 3"
+		)
 
-        due_date = get_due_date("2017-01-22", "Supplier", "_Test Supplier With Template 1")
-        self.assertEqual(due_date, "2017-02-28")
+		due_date = get_due_date("2016-01-22", "Supplier", "_Test Supplier With Template 1")
+		self.assertEqual(due_date, "2016-02-21")
 
-        frappe.db.set_value("Supplier", "_Test Supplier With Template 1", "payment_terms", "")
+		due_date = get_due_date("2017-01-22", "Supplier", "_Test Supplier With Template 1")
+		self.assertEqual(due_date, "2017-02-21")
 
-        # Set credit limit for the supplier group instead of supplier and evaluate the due date
-        frappe.db.set_value("Supplier Group", "_Test Supplier Group", "payment_terms", "_Test Payment Term Template 3")
+		# Payment Term based on last day of month
+		frappe.db.set_value(
+			"Supplier", "_Test Supplier With Template 1", "payment_terms", "_Test Payment Term Template 1"
+		)
 
-        due_date = get_due_date("2016-01-22", "Supplier", "_Test Supplier With Template 1")
-        self.assertEqual(due_date, "2016-02-21")
+		due_date = get_due_date("2016-01-22", "Supplier", "_Test Supplier With Template 1")
+		self.assertEqual(due_date, "2016-02-29")
 
-        # Payment terms for Supplier Group instead of supplier and evaluate the due date
-        frappe.db.set_value("Supplier Group", "_Test Supplier Group", "payment_terms", "_Test Payment Term Template 1")
+		due_date = get_due_date("2017-01-22", "Supplier", "_Test Supplier With Template 1")
+		self.assertEqual(due_date, "2017-02-28")
 
-        # Leap year
-        due_date = get_due_date("2016-01-22", "Supplier", "_Test Supplier With Template 1")
-        self.assertEqual(due_date, "2016-02-29")
-        # # Non Leap year
-        due_date = get_due_date("2017-01-22", "Supplier", "_Test Supplier With Template 1")
-        self.assertEqual(due_date, "2017-02-28")
+		frappe.db.set_value("Supplier", "_Test Supplier With Template 1", "payment_terms", "")
 
-        # Supplier with no default Payment Terms Template
-        frappe.db.set_value("Supplier Group", "_Test Supplier Group", "payment_terms", "")
-        frappe.db.set_value("Supplier", "_Test Supplier", "payment_terms", "")
+		# Set credit limit for the supplier group instead of supplier and evaluate the due date
+		frappe.db.set_value(
+			"Supplier Group", "_Test Supplier Group", "payment_terms", "_Test Payment Term Template 3"
+		)
 
-        due_date = get_due_date("2016-01-22", "Supplier", "_Test Supplier")
-        self.assertEqual(due_date, "2016-01-22")
-        # # Non Leap year
-        due_date = get_due_date("2017-01-22", "Supplier", "_Test Supplier")
-        self.assertEqual(due_date, "2017-01-22")
+		due_date = get_due_date("2016-01-22", "Supplier", "_Test Supplier With Template 1")
+		self.assertEqual(due_date, "2016-02-21")
 
-    def test_supplier_disabled(self):
-        make_test_records("Item")
+		# Payment terms for Supplier Group instead of supplier and evaluate the due date
+		frappe.db.set_value(
+			"Supplier Group", "_Test Supplier Group", "payment_terms", "_Test Payment Term Template 1"
+		)
 
-        frappe.db.set_value("Supplier", "_Test Supplier", "disabled", 1)
+		# Leap year
+		due_date = get_due_date("2016-01-22", "Supplier", "_Test Supplier With Template 1")
+		self.assertEqual(due_date, "2016-02-29")
+		# # Non Leap year
+		due_date = get_due_date("2017-01-22", "Supplier", "_Test Supplier With Template 1")
+		self.assertEqual(due_date, "2017-02-28")
 
-        from erpnext.buying.doctype.purchase_order.test_purchase_order import create_purchase_order
+		# Supplier with no default Payment Terms Template
+		frappe.db.set_value("Supplier Group", "_Test Supplier Group", "payment_terms", "")
+		frappe.db.set_value("Supplier", "_Test Supplier", "payment_terms", "")
 
-        po = create_purchase_order(do_not_save=True)
+		due_date = get_due_date("2016-01-22", "Supplier", "_Test Supplier")
+		self.assertEqual(due_date, "2016-01-22")
+		# # Non Leap year
+		due_date = get_due_date("2017-01-22", "Supplier", "_Test Supplier")
+		self.assertEqual(due_date, "2017-01-22")
 
-        self.assertRaises(PartyDisabled, po.save)
+	def test_supplier_disabled(self):
+		frappe.db.set_value("Supplier", "_Test Supplier", "disabled", 1)
 
-        frappe.db.set_value("Supplier", "_Test Supplier", "disabled", 0)
+		from erpnext.buying.doctype.purchase_order.test_purchase_order import create_purchase_order
 
-        po.save()
+		po = create_purchase_order(do_not_save=True)
 
-    def test_supplier_country(self):
-        # Test that country field exists in Supplier DocType
-        supplier = frappe.get_doc('Supplier', '_Test Supplier with Country')
-        self.assertTrue('country' in supplier.as_dict())
+		self.assertRaises(PartyDisabled, po.save)
 
-        # Test if test supplier field record is 'Greece'
-        self.assertEqual(supplier.country, "Greece")
+		frappe.db.set_value("Supplier", "_Test Supplier", "disabled", 0)
 
-        # Test update Supplier instance country value
-        supplier = frappe.get_doc('Supplier', '_Test Supplier')
-        supplier.country = 'Greece'
-        supplier.save()
-        self.assertEqual(supplier.country, "Greece")
+		po.save()
 
-    def test_party_details_tax_category(self):
-        from erpnext.accounts.party import get_party_details
+	def test_disabled_internal_supplier_does_not_block_new_one(self):
+		def make_internal_supplier():
+			supplier = frappe.new_doc("Supplier")
+			supplier.update(
+				{
+					"supplier_name": frappe.generate_hash(),
+					"supplier_group": "Services",
+					"is_internal_supplier": 1,
+					"represents_company": "_Test Company 7",
+					"companies": [{"company": "_Test Company 7"}],
+				}
+			)
+			return supplier.insert()
 
-        frappe.delete_doc_if_exists("Address", "_Test Address With Tax Category-Billing")
+		old_supplier = make_internal_supplier()
+		self.assertRaises(frappe.ValidationError, make_internal_supplier)
 
-        # Tax Category without Address
-        details = get_party_details("_Test Supplier With Tax Category", party_type="Supplier")
-        self.assertEqual(details.tax_category, "_Test Tax Category 1")
+		old_supplier.disabled = 1
+		old_supplier.save()
+		make_internal_supplier()
+		old_supplier.save()
 
-        address = frappe.get_doc(dict(
-            doctype='Address',
-            address_title='_Test Address With Tax Category',
-            tax_category='_Test Tax Category 2',
-            address_type='Billing',
-            address_line1='Station Road',
-            city='_Test City',
-            country='India',
-            links=[dict(
-                link_doctype='Supplier',
-                link_name='_Test Supplier With Tax Category'
-            )]
-        )).insert()
+	def test_primary_contact_must_be_linked_to_supplier(self):
+		other_supplier = create_supplier()
+		contact = frappe.get_doc(
+			{
+				"doctype": "Contact",
+				"first_name": frappe.generate_hash(),
+				"links": [{"link_doctype": "Supplier", "link_name": other_supplier.name}],
+			}
+		).insert()
 
-        # Tax Category with Address
-        details = get_party_details("_Test Supplier With Tax Category", party_type="Supplier")
-        self.assertEqual(details.tax_category, "_Test Tax Category 2")
+		supplier = create_supplier()
+		supplier.supplier_primary_contact = contact.name
+		self.assertRaises(frappe.ValidationError, supplier.save)
 
-        # Rollback
-        address.delete()
+		contact.append("links", {"link_doctype": "Supplier", "link_name": supplier.name})
+		contact.save()
+		supplier.reload()
+		supplier.supplier_primary_contact = contact.name
+		supplier.save()
+
+	def test_party_account_must_be_payable(self):
+		self.assertRaises(frappe.ValidationError, create_supplier, party_account="Debtors - _TC")
+		create_supplier(party_account="Creditors - _TC")
+
+	def test_supplier_group_must_be_a_leaf_on_insert(self):
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			"Cannot select a Group type Supplier Group",
+			create_supplier,
+			supplier_group="All Supplier Groups",
+		)
+
+	def test_supplier_group_must_be_a_leaf_on_update(self):
+		supplier = create_supplier(supplier_group="Services")
+		supplier.supplier_group = "All Supplier Groups"
+		self.assertRaisesRegex(
+			frappe.ValidationError, "Cannot select a Group type Supplier Group", supplier.save
+		)
+
+	def test_supplier_group_remains_optional(self):
+		supplier = create_supplier(without_supplier_group=True)
+		self.assertFalse(supplier.supplier_group)
+		supplier.supplier_group = "Services"
+		supplier.save()
+		supplier.supplier_group = None
+		supplier.save()
+		self.assertFalse(supplier.reload().supplier_group)
+
+	def test_hold_all_blocks_receipts_and_quotations(self):
+		from erpnext.stock.doctype.purchase_receipt.mapper import make_purchase_return
+		from erpnext.stock.doctype.purchase_receipt.test_purchase_receipt import make_purchase_receipt
+
+		supplier = create_supplier()
+		receipt = make_purchase_receipt(supplier=supplier.name)
+		supplier.update({"on_hold": 1, "hold_type": "All"})
+		supplier.save()
+
+		quotation = {"company": "_Test Company", "transaction_date": nowdate()}
+		item = {"item_code": "_Test Item", "qty": 1, "rate": 100, "warehouse": "_Test Warehouse - _TC"}
+		rfq_item = {**item, "uom": "_Test UOM", "conversion_factor": 1, "schedule_date": nowdate()}
+		documents = [
+			lambda: make_purchase_receipt(supplier=supplier.name),
+			frappe.get_doc(
+				{"doctype": "Supplier Quotation", "supplier": supplier.name, "items": [item], **quotation}
+			).insert,
+			frappe.get_doc(
+				{
+					"doctype": "Request for Quotation",
+					"message_for_supplier": "Please quote",
+					"suppliers": [{"supplier": supplier.name}],
+					"items": [rfq_item],
+					**quotation,
+				}
+			).insert,
+		]
+		for make_document in documents:
+			self.assertRaisesRegex(frappe.ValidationError, "is blocked", make_document)
+
+		make_purchase_return(receipt.name).submit()
+
+	def test_hold_payments_blocks_bank_and_cash_journal_entries(self):
+		from erpnext.accounts.doctype.journal_entry.test_journal_entry import make_journal_entry
+
+		supplier = create_supplier()
+		supplier.update({"on_hold": 1, "hold_type": "Payments"})
+		supplier.save()
+
+		def make_supplier_entry(contra_account, amount=100):
+			journal_entry = make_journal_entry("Creditors - _TC", contra_account, amount, save=False)
+			journal_entry.accounts[0].update({"party_type": "Supplier", "party": supplier.name})
+			return journal_entry
+
+		self.assertRaisesRegex(
+			frappe.ValidationError, "is blocked", make_supplier_entry("_Test Bank - _TC").insert
+		)
+		make_supplier_entry("_Test Account Cost for Goods Sold - _TC").insert()
+		make_supplier_entry("_Test Bank - _TC", amount=-100).insert()
+
+		negative_bank_debit = make_supplier_entry("_Test Bank - _TC")
+		negative_bank_debit.accounts[1].update(
+			{"credit_in_account_currency": 0, "debit_in_account_currency": -100}
+		)
+		self.assertRaisesRegex(frappe.ValidationError, "is blocked", negative_bank_debit.insert)
+
+		refund_with_other_payment = make_supplier_entry("_Test Bank - _TC")
+		refund_with_other_payment.accounts[0].update({"party": create_supplier().name})
+		refund_with_other_payment.accounts[1].credit_in_account_currency = 70
+		refund_with_other_payment.append(
+			"accounts",
+			{
+				"account": "Creditors - _TC",
+				"party_type": "Supplier",
+				"party": supplier.name,
+				"cost_center": "_Test Cost Center - _TC",
+				"credit_in_account_currency": 30,
+			},
+		)
+		refund_with_other_payment.insert()
+
+	def test_hold_payments_ignores_is_return_on_payment_entry(self):
+		from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+		from erpnext.buying.doctype.purchase_order.test_purchase_order import create_purchase_order
+
+		supplier = create_supplier()
+		payment_entry = get_payment_entry(
+			"Purchase Order",
+			create_purchase_order(supplier=supplier.name).name,
+			bank_account="_Test Bank - _TC",
+		)
+		supplier.update({"on_hold": 1, "hold_type": "Payments"})
+		supplier.save()
+
+		payment_entry.update(
+			{"references": [], "reference_no": "1", "reference_date": nowdate(), "is_return": 1}
+		)
+		self.assertRaisesRegex(frappe.ValidationError, "is blocked", payment_entry.insert)
+
+	def test_supplier_country(self):
+		# Test that country field exists in Supplier DocType
+		supplier = frappe.get_doc("Supplier", "_Test Supplier with Country")
+		self.assertIn("country", supplier.as_dict())
+
+		# Test if test supplier field record is 'Greece'
+		self.assertEqual(supplier.country, "Greece")
+
+		# Test update Supplier instance country value
+		supplier = frappe.get_doc("Supplier", "_Test Supplier")
+		supplier.country = "Greece"
+		supplier.save()
+		self.assertEqual(supplier.country, "Greece")
+
+	def test_party_details_tax_category(self):
+		from erpnext.accounts.party import _get_party_details
+
+		frappe.delete_doc_if_exists("Address", "_Test Address With Tax Category-Billing")
+
+		# Tax Category without Address
+		details = _get_party_details("_Test Supplier With Tax Category", party_type="Supplier")
+		self.assertEqual(details.tax_category, "_Test Tax Category 1")
+
+		address = frappe.get_doc(
+			doctype="Address",
+			address_title="_Test Address With Tax Category",
+			tax_category="_Test Tax Category 2",
+			address_type="Billing",
+			address_line1="Station Road",
+			city="_Test City",
+			country="India",
+			links=[dict(link_doctype="Supplier", link_name="_Test Supplier With Tax Category")],
+		).insert()
+
+		# Tax Category with Address
+		details = _get_party_details("_Test Supplier With Tax Category", party_type="Supplier")
+		self.assertEqual(details.tax_category, "_Test Tax Category 2")
+
+		# Rollback
+		address.delete()
+
+	def test_dashboard_hidden_from_user_with_only_a_shared_invoice(self):
+		from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
+		from erpnext.accounts.party import get_dashboard_info
+		from erpnext.buying.test_utils import create_user_with_roles
+
+		pi = make_purchase_invoice(supplier="_Test Supplier")
+		user = create_user_with_roles("supplier-dashboard-user@example.com", "Stock User").name
+		frappe.share.add_docshare(pi.doctype, pi.name, user, read=1, flags={"ignore_share_permission": True})
+
+		with self.set_user(user):
+			self.assertIsNone(get_dashboard_info("Supplier", "_Test Supplier"))
+
 
 def create_supplier(**args):
-    args = frappe._dict(args)
+	args = frappe._dict(args)
 
-    try:
-        doc = frappe.get_doc({
-            "doctype": "Supplier",
-            "supplier_name": args.supplier_name,
-            "supplier_group": args.supplier_group or "Services",
-            "supplier_type": args.supplier_type or "Company",
-            "tax_withholding_category": args.tax_withholding_category
-        }).insert()
+	if not args.supplier_name:
+		args.supplier_name = frappe.generate_hash()
 
-        return doc
+	if frappe.db.exists("Supplier", args.supplier_name):
+		return frappe.get_doc("Supplier", args.supplier_name)
 
-    except frappe.DuplicateEntryError:
-        return frappe.get_doc("Supplier", args.supplier_name)
+	doc = frappe.get_doc(
+		{
+			"doctype": "Supplier",
+			"supplier_name": args.supplier_name,
+			"default_currency": args.default_currency,
+			"supplier_type": args.supplier_type or "Company",
+			"tax_withholding_category": args.tax_withholding_category,
+		}
+	)
+	if not args.without_supplier_group:
+		doc.supplier_group = args.supplier_group or "Services"
+
+	if args.get("party_account"):
+		doc.append(
+			"accounts",
+			{
+				"company": frappe.db.get_value("Account", args.get("party_account"), "company"),
+				"account": args.get("party_account"),
+			},
+		)
+
+	doc.insert()
+
+	return doc
+
+
+from erpnext.tests.utils import ERPNextTestSuite
+
+
+class TestSupplierPortal(ERPNextTestSuite):
+	def test_portal_user_can_access_supplier_data(self):
+		supplier = create_supplier()
+
+		user = frappe.generate_hash() + "@example.com"
+		frappe.new_doc(
+			"User",
+			first_name="Supplier Portal User",
+			email=user,
+			send_welcome_email=False,
+		).insert()
+
+		supplier.append("portal_users", {"user": user})
+		supplier.save()
+
+		with self.set_user(user):
+			_, suppliers = get_customers_suppliers("Purchase Order", user)
+
+			self.assertIn(supplier.name, suppliers)
+
+	def test_portal_user_contact_link(self):
+		user_email = frappe.generate_hash() + "@example.com"
+		user = frappe.new_doc("User")
+		user.email = user_email
+		user.first_name = "Test Portal Contact User"
+		user.send_welcome_email = False
+		user.insert(ignore_permissions=True)
+
+		contact = frappe.new_doc("Contact")
+		contact.first_name = "Test Portal Contact User"
+		contact.add_email(user_email, is_primary=1)
+		contact.links = []
+		contact.insert(ignore_permissions=True)
+
+		supplier = create_supplier()
+		supplier.append("portal_users", {"user": user.name})
+		supplier.save()
+
+		contact.reload()
+		self.assertTrue(contact.has_link("Supplier", supplier.name))

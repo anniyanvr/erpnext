@@ -2,25 +2,34 @@
  "actions": [],
  "autoname": "naming_series:",
  "creation": "2015-12-15 22:23:24.745065",
+ "description": "Ask a customer to pay, by email with a payment link.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/payment-request",
  "engine": "InnoDB",
  "field_order": [
   "payment_request_type",
   "transaction_date",
+  "failed_reason",
   "column_break_2",
   "naming_series",
+  "company",
   "mode_of_payment",
   "party_details",
   "party_type",
   "party",
+  "party_name",
   "column_break_4",
   "reference_doctype",
   "reference_name",
+  "payment_reference_section",
+  "payment_reference",
   "transaction_details",
   "grand_total",
+  "currency",
   "is_a_subscription",
   "column_break_18",
-  "currency",
+  "outstanding_amount",
+  "party_account_currency",
   "subscription_section",
   "subscription_plans",
   "bank_account_details",
@@ -32,6 +41,10 @@
   "iban",
   "branch_code",
   "swift_number",
+  "accounting_dimensions_section",
+  "cost_center",
+  "dimension_col_break",
+  "project",
   "recipient_and_message",
   "print_format",
   "email_to",
@@ -44,13 +57,16 @@
   "message",
   "message_examples",
   "mute_email",
-  "payment_url",
   "section_break_7",
   "payment_gateway",
   "payment_account",
   "payment_channel",
   "payment_order",
-  "amended_from"
+  "amended_from",
+  "column_break_pnyv",
+  "payment_url",
+  "column_break_iiuv",
+  "phone_number"
  ],
  "fields": [
   {
@@ -64,6 +80,7 @@
   {
    "fieldname": "transaction_date",
    "fieldtype": "Date",
+   "in_preview": 1,
    "label": "Transaction Date"
   },
   {
@@ -128,7 +145,8 @@
    "no_copy": 1,
    "options": "reference_doctype",
    "print_hide": 1,
-   "read_only": 1
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "transaction_details",
@@ -136,11 +154,15 @@
    "label": "Transaction Details"
   },
   {
-   "description": "Amount in customer's currency",
+   "description": "Amount in transaction currency",
    "fieldname": "grand_total",
    "fieldtype": "Currency",
+   "in_preview": 1,
    "label": "Amount",
-   "options": "currency"
+   "non_negative": 1,
+   "options": "currency",
+   "read_only_depends_on": "eval:doc.payment_reference.length>0",
+   "reqd": 1
   },
   {
    "default": "0",
@@ -163,7 +185,7 @@
    "depends_on": "eval:doc.is_a_subscription",
    "fieldname": "subscription_section",
    "fieldtype": "Section Break",
-   "label": "Subscription Section"
+   "label": "Subscription"
   },
   {
    "fieldname": "subscription_plans",
@@ -186,8 +208,10 @@
   {
    "fetch_from": "bank_account.bank",
    "fieldname": "bank",
-   "fieldtype": "Read Only",
-   "label": "Bank"
+   "fieldtype": "Link",
+   "label": "Bank",
+   "options": "Bank",
+   "read_only": 1
   },
   {
    "fetch_from": "bank_account.bank_account_no",
@@ -209,7 +233,8 @@
    "fetch_from": "bank_account.iban",
    "fieldname": "iban",
    "fieldtype": "Read Only",
-   "label": "IBAN"
+   "label": "IBAN",
+   "options": "IBAN"
   },
   {
    "fetch_from": "bank_account.branch_code",
@@ -225,13 +250,35 @@
    "label": "SWIFT Number"
   },
   {
+   "collapsible": 1,
+   "fieldname": "accounting_dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "dimension_col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
    "depends_on": "eval: doc.payment_request_type == 'Inward'",
    "fieldname": "recipient_and_message",
    "fieldtype": "Section Break",
    "label": "Recipient Message And Payment Details"
   },
   {
-   "depends_on": "eval: doc.payment_channel != \"Phone\"",
+   "depends_on": "eval: doc.payment_channel == \"Email\" || (!doc.payment_channel)",
    "fieldname": "print_format",
    "fieldtype": "Select",
    "label": "Print Format"
@@ -243,7 +290,7 @@
    "label": "To"
   },
   {
-   "depends_on": "eval: doc.payment_channel != \"Phone\"",
+   "depends_on": "eval: doc.payment_channel == \"Email\" || (!doc.payment_channel)",
    "fieldname": "subject",
    "fieldtype": "Data",
    "in_global_search": 1,
@@ -280,18 +327,18 @@
    "read_only": 1
   },
   {
-   "depends_on": "eval: doc.payment_request_type == 'Inward' || doc.payment_channel != \"Phone\"",
+   "depends_on": "eval: doc.payment_request_type == 'Inward' || doc.payment_channel == \"Email\" || (!doc.payment_channel)",
    "fieldname": "section_break_10",
    "fieldtype": "Section Break"
   },
   {
-   "depends_on": "eval: doc.payment_channel != \"Phone\"",
+   "depends_on": "eval: doc.payment_channel == \"Email\" || (!doc.payment_channel)",
    "fieldname": "message",
    "fieldtype": "Text",
    "label": "Message"
   },
   {
-   "depends_on": "eval: doc.payment_channel != \"Phone\"",
+   "depends_on": "eval: doc.payment_channel == \"Email\" || (!doc.payment_channel)",
    "fieldname": "message_examples",
    "fieldtype": "HTML",
    "label": "Message Examples",
@@ -311,9 +358,10 @@
   },
   {
    "fieldname": "payment_url",
-   "fieldtype": "Small Text",
-   "hidden": 1,
-   "label": "payment_url",
+   "fieldtype": "Data",
+   "label": "Payment URL",
+   "length": 500,
+   "options": "URL",
    "read_only": 1
   },
   {
@@ -338,6 +386,15 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval: doc.payment_channel==\"Phone\"",
+   "fetch_from": "payment_gateway_account.payment_channel",
+   "fieldname": "payment_channel",
+   "fieldtype": "Select",
+   "label": "Payment Channel",
+   "options": "\nEmail\nPhone\nOther",
+   "read_only": 1
+  },
+  {
    "fieldname": "payment_order",
    "fieldtype": "Link",
    "label": "Payment Order",
@@ -354,22 +411,81 @@
    "read_only": 1
   },
   {
-   "fetch_from": "payment_gateway_account.payment_channel",
-   "fieldname": "payment_channel",
-   "fieldtype": "Select",
-   "label": "Payment Channel",
-   "options": "\nEmail\nPhone",
+   "fieldname": "failed_reason",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Reason for Failure",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval: doc.docstatus === 1",
+   "description": "Amount in party's bank account currency",
+   "fieldname": "outstanding_amount",
+   "fieldtype": "Currency",
+   "in_preview": 1,
+   "label": "Outstanding Amount",
+   "non_negative": 1,
+   "options": "party_account_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pnyv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "party_account_currency",
+   "fieldtype": "Link",
+   "label": "Party Account Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "party_name",
+   "fieldtype": "Data",
+   "label": "Party Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_iiuv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "label": "Phone Number"
+  },
+  {
+   "fieldname": "payment_reference_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "payment_reference",
+   "fieldtype": "Table",
+   "label": "Payment Reference",
+   "options": "Payment Reference",
    "read_only": 1
   }
  ],
+ "grid_page_length": 50,
+ "icon": "hand-coins",
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2020-09-18 12:24:14.178853",
+ "modified": "2026-02-27 19:11:03.308896",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Request",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -400,6 +516,9 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
- "sort_order": "DESC"
+ "row_format": "Dynamic",
+ "show_preview_popup": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
 }

@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "autoname": "hash",
  "creation": "2013-02-22 01:27:39",
  "doctype": "DocType",
@@ -9,12 +10,10 @@
  "field_order": [
   "account",
   "account_type",
-  "balance",
   "col_break1",
   "bank_account",
   "party_type",
   "party",
-  "party_balance",
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
@@ -34,6 +33,9 @@
   "reference_name",
   "reference_due_date",
   "reference_detail_no",
+  "advance_voucher_type",
+  "advance_voucher_no",
+  "is_tax_withholding_account",
   "col_break3",
   "is_advance",
   "user_remark",
@@ -42,10 +44,10 @@
  "fields": [
   {
    "bold": 1,
-   "columns": 2,
+   "columns": 4,
+   "fetch_from": "bank_account.account",
    "fieldname": "account",
    "fieldtype": "Link",
-   "in_global_search": 1,
    "in_list_view": 1,
    "label": "Account",
    "oldfieldname": "account",
@@ -64,17 +66,7 @@
    "print_hide": 1
   },
   {
-   "fieldname": "balance",
-   "fieldtype": "Currency",
-   "label": "Account Balance",
-   "no_copy": 1,
-   "oldfieldname": "balance",
-   "oldfieldtype": "Data",
-   "options": "account_currency",
-   "print_hide": 1,
-   "read_only": 1
-  },
-  {
+   "allow_on_submit": 1,
    "default": ":Company",
    "description": "If Income or Expense",
    "fieldname": "cost_center",
@@ -94,6 +86,7 @@
   {
    "fieldname": "party_type",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Party Type",
    "options": "DocType",
@@ -103,17 +96,10 @@
    "columns": 2,
    "fieldname": "party",
    "fieldtype": "Dynamic Link",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Party",
    "options": "party_type"
-  },
-  {
-   "fieldname": "party_balance",
-   "fieldtype": "Currency",
-   "label": "Party Balance",
-   "options": "account_currency",
-   "print_hide": 1,
-   "read_only": 1
   },
   {
    "fieldname": "currency_section",
@@ -124,7 +110,6 @@
    "fieldname": "account_currency",
    "fieldtype": "Link",
    "label": "Account Currency",
-   "no_copy": 1,
    "options": "Currency",
    "print_hide": 1,
    "read_only": 1
@@ -150,6 +135,7 @@
    "columns": 2,
    "fieldname": "debit_in_account_currency",
    "fieldtype": "Currency",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Debit",
    "options": "account_currency",
@@ -176,6 +162,7 @@
    "columns": 2,
    "fieldname": "credit_in_account_currency",
    "fieldtype": "Currency",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Credit",
    "options": "account_currency",
@@ -202,22 +189,27 @@
    "fieldname": "reference_type",
    "fieldtype": "Select",
    "label": "Reference Type",
-   "options": "\nSales Invoice\nPurchase Invoice\nJournal Entry\nSales Order\nPurchase Order\nExpense Claim\nAsset\nLoan\nPayroll Entry\nEmployee Advance\nExchange Rate Revaluation\nInvoice Discounting\nFees\nFull and Final Statement"
+   "no_copy": 1,
+   "options": "\nSales Invoice\nPurchase Invoice\nJournal Entry\nSales Order\nPurchase Order\nExpense Claim\nAsset\nLoan\nPayroll Entry\nEmployee Advance\nExchange Rate Revaluation\nInvoice Discounting\nFees\nFull and Final Statement\nPayment Entry\nBank Transaction",
+   "search_index": 1
   },
   {
    "fieldname": "reference_name",
    "fieldtype": "Dynamic Link",
-   "in_list_view": 1,
    "label": "Reference Name",
-   "options": "reference_type"
+   "no_copy": 1,
+   "options": "reference_type",
+   "search_index": 1
   },
   {
-   "depends_on": "eval:doc.reference_type&&!in_list(doc.reference_type, ['Expense Claim', 'Asset', 'Employee Loan', 'Employee Advance'])",
+   "depends_on": "eval:doc.reference_type&&!in_list(doc.reference_type, ['Expense Claim', 'Asset', 'Employee Loan', 'Employee Advance', 'Bank Transaction'])",
    "fieldname": "reference_due_date",
-   "fieldtype": "Select",
-   "label": "Reference Due Date"
+   "fieldtype": "Date",
+   "label": "Reference Due Date",
+   "no_copy": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "project",
    "fieldtype": "Link",
    "label": "Project",
@@ -274,19 +266,48 @@
    "fieldname": "reference_detail_no",
    "fieldtype": "Data",
    "hidden": 1,
-   "label": "Reference Detail No"
+   "label": "Reference Detail No",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "advance_voucher_type",
+   "fieldtype": "Link",
+   "label": "Advance Voucher Type",
+   "no_copy": 1,
+   "options": "DocType",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "advance_voucher_no",
+   "fieldtype": "Dynamic Link",
+   "label": "Advance Voucher No",
+   "no_copy": 1,
+   "options": "advance_voucher_type",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_tax_withholding_account",
+   "fieldtype": "Check",
+   "label": "Is Tax Withholding Account",
+   "read_only": 1
   }
  ],
  "idx": 1,
  "istable": 1,
  "links": [],
- "modified": "2021-08-30 21:27:32.200299",
+ "modified": "2026-09-30 23:24:44.044604",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Journal Entry Account",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

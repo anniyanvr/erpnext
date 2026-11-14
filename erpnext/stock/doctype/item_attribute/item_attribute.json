@@ -4,12 +4,16 @@
  "allow_rename": 1,
  "autoname": "field:attribute_name",
  "creation": "2014-09-26 03:49:54.899170",
+ "description": "A property item variants differ by, like size or colour.",
  "doctype": "DocType",
  "document_type": "Setup",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/item-attribute",
  "engine": "InnoDB",
  "field_order": [
   "attribute_name",
   "numeric_values",
+  "column_break_vbik",
+  "disabled",
   "section_break_4",
   "from_range",
   "increment",
@@ -70,15 +74,26 @@
    "fieldtype": "Table",
    "label": "Item Attribute Values",
    "options": "Item Attribute Value"
+  },
+  {
+   "fieldname": "column_break_vbik",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
   }
  ],
- "icon": "fa fa-edit",
+ "icon": "tags",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2020-10-02 12:03:02.359202",
+ "modified": "2024-11-26 20:05:29.421714",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Item Attribute",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -91,7 +106,8 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

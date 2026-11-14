@@ -4,8 +4,12 @@
  "allow_rename": 1,
  "autoname": "field:supplier_group_name",
  "creation": "2013-01-10 16:34:24",
+ "default_view": "Tree",
+ "description": "Groups suppliers, for terms and reporting.",
  "doctype": "DocType",
  "document_type": "Setup",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/supplier-group",
+ "engine": "InnoDB",
  "field_order": [
   "supplier_group_name",
   "parent_supplier_group",
@@ -33,6 +37,7 @@
    "fieldname": "parent_supplier_group",
    "fieldtype": "Link",
    "ignore_user_permissions": 1,
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Parent Supplier Group",
    "options": "Supplier Group"
@@ -40,8 +45,10 @@
   {
    "bold": 1,
    "default": "0",
+   "description": "Only leaf nodes are allowed in transaction",
    "fieldname": "is_group",
    "fieldtype": "Check",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Is Group"
   },
@@ -54,6 +61,7 @@
   {
    "fieldname": "payment_terms",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "label": "Default Payment Terms Template",
    "options": "Payment Terms Template"
   },
@@ -102,14 +110,15 @@
    "report_hide": 1
   }
  ],
- "icon": "fa fa-flag",
+ "icon": "users",
  "idx": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2020-03-18 18:10:49.228407",
+ "modified": "2026-08-21 23:11:50.079034",
  "modified_by": "Administrator",
  "module": "Setup",
  "name": "Supplier Group",
+ "naming_rule": "By fieldname",
  "nsm_parent_field": "parent_supplier_group",
  "owner": "Administrator",
  "permissions": [
@@ -137,7 +146,6 @@
    "read": 1,
    "report": 1,
    "role": "Purchase Master Manager",
-   "set_user_permissions": 1,
    "share": 1,
    "write": 1
   },
@@ -156,8 +164,28 @@
    "permlevel": 1,
    "read": 1,
    "role": "Purchase User"
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1
+  },
+  {
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "role": "Website Manager",
+   "select": 1
   }
  ],
+ "row_format": "Dynamic",
  "show_name_in_global_search": 1,
- "sort_order": "ASC"
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": [],
+ "translated_doctype": 1
 }

@@ -1,8 +1,8 @@
 // Copyright (c) 2021, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Party Specific Item', {
-	// refresh: function(frm) {
-
-	// }
+frappe.ui.form.on("Party Specific Item", {
+	party_type: function (frm) {
+		frm.set_query("party", null);
+	},
 });

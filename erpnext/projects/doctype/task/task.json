@@ -3,8 +3,10 @@
  "allow_import": 1,
  "autoname": "TASK-.YYYY.-.#####",
  "creation": "2013-01-29 19:25:50",
+ "description": "A piece of work to be done, often part of a project.",
  "doctype": "DocType",
  "document_type": "Setup",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/tasks",
  "engine": "InnoDB",
  "field_order": [
   "subject",
@@ -13,7 +15,6 @@
   "type",
   "color",
   "is_group",
-  "is_template",
   "column_break0",
   "status",
   "priority",
@@ -21,17 +22,21 @@
   "parent_task",
   "completed_by",
   "completed_on",
+  "section_break_dafi",
+  "is_template",
+  "column_break_vvfp",
+  "start",
+  "duration",
   "sb_timeline",
   "exp_start_date",
   "expected_time",
-  "start",
   "column_break_11",
   "exp_end_date",
   "progress",
-  "duration",
   "is_milestone",
   "sb_details",
   "description",
+  "dependencies_tab",
   "sb_depends_on",
   "depends_on",
   "depends_on_tasks",
@@ -42,21 +47,23 @@
   "act_end_date",
   "sb_costing",
   "total_costing_amount",
-  "total_expense_claim",
   "column_break_20",
   "total_billing_amount",
+  "more_info_tab",
   "sb_more_info",
+  "company",
   "review_date",
   "closing_date",
   "column_break_22",
   "department",
-  "company",
   "lft",
   "rgt",
-  "old_parent"
+  "old_parent",
+  "template_task"
  ],
  "fields": [
   {
+   "allow_in_quick_entry": 1,
    "fieldname": "subject",
    "fieldtype": "Data",
    "in_global_search": 1,
@@ -66,17 +73,18 @@
    "search_index": 1
   },
   {
+   "allow_in_quick_entry": 1,
    "bold": 1,
    "fieldname": "project",
    "fieldtype": "Link",
    "in_global_search": 1,
+   "in_import_template": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Project",
    "oldfieldname": "project",
    "oldfieldtype": "Link",
    "options": "Project",
-   "remember_last_selected_value": 1,
    "search_index": 1
   },
   {
@@ -110,6 +118,7 @@
    "bold": 1,
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_import_template": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
@@ -119,8 +128,10 @@
    "options": "Open\nWorking\nPending Review\nOverdue\nTemplate\nCompleted\nCancelled"
   },
   {
+   "allow_in_quick_entry": 1,
    "fieldname": "priority",
    "fieldtype": "Select",
+   "in_import_template": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Priority",
@@ -145,14 +156,17 @@
   },
   {
    "collapsible": 1,
-   "collapsible_depends_on": "eval:doc.__islocal",
+   "collapsible_depends_on": "exp_start_date",
    "fieldname": "sb_timeline",
    "fieldtype": "Section Break",
    "label": "Timeline"
   },
   {
+   "allow_in_quick_entry": 1,
+   "bold": 1,
    "fieldname": "exp_start_date",
-   "fieldtype": "Date",
+   "fieldtype": "Datetime",
+   "in_import_template": 1,
    "label": "Expected Start Date",
    "oldfieldname": "exp_start_date",
    "oldfieldtype": "Date"
@@ -161,24 +175,27 @@
    "default": "0",
    "fieldname": "expected_time",
    "fieldtype": "Float",
+   "in_import_template": 1,
    "label": "Expected Time (in hours)",
    "oldfieldname": "exp_total_hrs",
    "oldfieldtype": "Data"
   },
   {
-   "fetch_from": "type.weight",
    "fieldname": "task_weight",
    "fieldtype": "Float",
-   "label": "Weight"
+   "label": "Weight",
+   "non_negative": 1
   },
   {
    "fieldname": "column_break_11",
    "fieldtype": "Column Break"
   },
   {
+   "allow_in_quick_entry": 1,
    "bold": 1,
    "fieldname": "exp_end_date",
-   "fieldtype": "Date",
+   "fieldtype": "Datetime",
+   "in_import_template": 1,
    "label": "Expected End Date",
    "oldfieldname": "exp_end_date",
    "oldfieldtype": "Date",
@@ -204,8 +221,10 @@
    "oldfieldtype": "Section Break"
   },
   {
+   "allow_in_quick_entry": 1,
    "fieldname": "description",
    "fieldtype": "Text Editor",
+   "in_import_template": 1,
    "label": "Task Description",
    "oldfieldname": "description",
    "oldfieldtype": "Text Editor",
@@ -215,7 +234,6 @@
   {
    "fieldname": "sb_depends_on",
    "fieldtype": "Section Break",
-   "label": "Dependencies",
    "oldfieldtype": "Section Break"
   },
   {
@@ -241,7 +259,8 @@
   {
    "fieldname": "act_start_date",
    "fieldtype": "Date",
-   "label": "Actual Start Date (via Time Sheet)",
+   "label": "Actual Start Date (via Timesheet)",
+   "no_copy": 1,
    "oldfieldname": "act_start_date",
    "oldfieldtype": "Date",
    "read_only": 1
@@ -249,7 +268,8 @@
   {
    "fieldname": "actual_time",
    "fieldtype": "Float",
-   "label": "Actual Time (in hours)",
+   "label": "Actual Time in Hours (via Timesheet)",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -259,7 +279,8 @@
   {
    "fieldname": "act_end_date",
    "fieldtype": "Date",
-   "label": "Actual End Date (via Time Sheet)",
+   "label": "Actual End Date (via Timesheet)",
+   "no_copy": 1,
    "oldfieldname": "act_end_date",
    "oldfieldtype": "Date",
    "read_only": 1
@@ -273,16 +294,10 @@
   {
    "fieldname": "total_costing_amount",
    "fieldtype": "Currency",
-   "label": "Total Costing Amount (via Time Sheet)",
+   "label": "Total Costing Amount (via Timesheet)",
+   "no_copy": 1,
    "oldfieldname": "actual_budget",
    "oldfieldtype": "Currency",
-   "options": "Company:company:default_currency",
-   "read_only": 1
-  },
-  {
-   "fieldname": "total_expense_claim",
-   "fieldtype": "Currency",
-   "label": "Total Expense Claim (via Expense Claim)",
    "options": "Company:company:default_currency",
    "read_only": 1
   },
@@ -293,17 +308,17 @@
   {
    "fieldname": "total_billing_amount",
    "fieldtype": "Currency",
-   "label": "Total Billing Amount (via Time Sheet)",
+   "label": "Total Billable Amount (via Timesheet)",
+   "no_copy": 1,
    "read_only": 1
   },
   {
-   "collapsible": 1,
    "fieldname": "sb_more_info",
    "fieldtype": "Section Break",
-   "label": "More Info"
+   "label": "Additional Info"
   },
   {
-   "depends_on": "eval:doc.status == \"Closed\" || doc.status == \"Pending Review\"",
+   "depends_on": "eval:doc.status == \"Completed\" || doc.status == \"Pending Review\"",
    "fieldname": "review_date",
    "fieldtype": "Date",
    "label": "Review Date",
@@ -311,7 +326,7 @@
    "oldfieldtype": "Date"
   },
   {
-   "depends_on": "eval:doc.status == \"Closed\"",
+   "depends_on": "eval:doc.status == \"Completed\"",
    "fieldname": "closing_date",
    "fieldtype": "Date",
    "label": "Closing Date",
@@ -333,8 +348,7 @@
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
-   "options": "Company",
-   "remember_last_selected_value": 1
+   "options": "Company"
   },
   {
    "fieldname": "lft",
@@ -390,17 +404,43 @@
    "fieldtype": "Date",
    "label": "Completed On",
    "mandatory_depends_on": "eval: doc.status == \"Completed\""
+  },
+  {
+   "fieldname": "template_task",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Template Task"
+  },
+  {
+   "fieldname": "dependencies_tab",
+   "fieldtype": "Tab Break",
+   "label": "Dependencies"
+  },
+  {
+   "fieldname": "more_info_tab",
+   "fieldtype": "Tab Break",
+   "label": "More Info"
+  },
+  {
+   "fieldname": "section_break_dafi",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_vvfp",
+   "fieldtype": "Column Break"
   }
  ],
- "icon": "fa fa-check",
+ "icon": "list-checks",
  "idx": 1,
  "is_tree": 1,
+ "link_display_mode": "Search",
  "links": [],
  "max_attachments": 5,
- "modified": "2021-04-16 12:46:51.556741",
+ "modified": "2026-11-02 16:48:25.316976",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Task",
+ "naming_rule": "Expression",
  "nsm_parent_field": "parent_task",
  "owner": "Administrator",
  "permissions": [
@@ -414,13 +454,42 @@
    "role": "Projects User",
    "share": 1,
    "write": 1
+  },
+  {
+   "role": "HR User",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "role": "Accounts User",
+   "select": 1
+  },
+  {
+   "role": "Employee",
+   "select": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "select": 1
   }
  ],
+ "quick_entry": 1,
+ "row_format": "Dynamic",
  "search_fields": "subject",
  "show_name_in_global_search": 1,
  "show_preview_popup": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "timeline_field": "project",
  "title_field": "subject",
  "track_seen": 1

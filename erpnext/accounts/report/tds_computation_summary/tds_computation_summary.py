@@ -1,127 +1,95 @@
 import frappe
 from frappe import _
 
-from erpnext.accounts.report.tds_payable_monthly.tds_payable_monthly import (
-	get_result,
-	get_tds_docs,
+from erpnext.accounts.report.tax_withholding_details.tax_withholding_details import (
+	TaxWithholdingDetailsReport,
 )
 from erpnext.accounts.utils import get_fiscal_year
 
 
-def execute(filters=None):
-	validate_filters(filters)
+class TDSComputationSummaryReport(TaxWithholdingDetailsReport):
+	# a lower deduction certificate or a mid-year rate change must not merge into the normal rate
+	GROUP_BY_FIELDS = ("party_type", "party", "tax_withholding_category", "rate")
+	CARRY_OVER_FIELDS = (
+		"tax_id",
+		"party",
+		"party_type",
+		"party_name",
+		"tax_withholding_category",
+		"party_entity_type",
+		"rate",
+	)
+	AGGREGATE_FIELDS = ("total_amount", "tax_amount")
 
-	filters.naming_series = frappe.db.get_single_value('Buying Settings', 'supp_master_name')
+	def validate_filters(self):
+		super().validate_filters()
 
-	columns = get_columns(filters)
-	tds_docs, tds_accounts, tax_category_map = get_tds_docs(filters)
+		from_year = get_fiscal_year(self.filters.from_date)[0]
+		to_year = get_fiscal_year(self.filters.to_date)[0]
+		if from_year != to_year:
+			frappe.throw(_("From Date and To Date lie in different Fiscal Year"))
 
-	res = get_result(filters, tds_docs, tds_accounts, tax_category_map)
-	final_result = group_by_supplier_and_category(res)
+		self.filters.fiscal_year = from_year
 
-	return columns, final_result
+	def get_data(self):
+		return self.group_rows(super().get_data())
 
-def validate_filters(filters):
-	''' Validate if dates are properly set and lie in the same fiscal year'''
-	if filters.from_date > filters.to_date:
-		frappe.throw(_("From Date must be before To Date"))
+	def group_rows(self, data):
+		grouped = {}
+		for row in data:
+			key = tuple(row.get(f) for f in self.GROUP_BY_FIELDS)
+			bucket = grouped.setdefault(
+				key,
+				{
+					**{f: row.get(f) for f in self.CARRY_OVER_FIELDS},
+					**{f: 0.0 for f in self.AGGREGATE_FIELDS},
+				},
+			)
 
-	from_year = get_fiscal_year(filters.from_date)[0]
-	to_year = get_fiscal_year(filters.to_date)[0]
-	if from_year != to_year:
-		frappe.throw(_("From Date and To Date lie in different Fiscal Year"))
+			for f in self.AGGREGATE_FIELDS:
+				bucket[f] += row.get(f) or 0.0
 
-	filters["fiscal_year"] = from_year
+		return list(grouped.values())
 
-def group_by_supplier_and_category(data):
-	supplier_category_wise_map = {}
+	def get_columns(self):
+		party_type = self.filters.get("party_type", "Party")
+		return [
+			{"label": _("Tax Id"), "fieldname": "tax_id", "fieldtype": "Data", "width": 90},
+			{
+				"label": _(party_type),
+				"fieldname": "party",
+				"fieldtype": "Dynamic Link",
+				"options": "party_type",
+				"width": 180,
+			},
+			{
+				"label": _(f"{party_type} Name"),
+				"fieldname": "party_name",
+				"fieldtype": "Data",
+				"width": 180,
+			},
+			{
+				"label": _("Tax Withholding Category"),
+				"options": "Tax Withholding Category",
+				"fieldname": "tax_withholding_category",
+				"fieldtype": "Link",
+				"width": 180,
+			},
+			{
+				"label": _(f"{party_type} Type"),
+				"fieldname": "party_entity_type",
+				"fieldtype": "Data",
+				"width": 180,
+			},
+			{"label": _("Tax Rate %"), "fieldname": "rate", "fieldtype": "Percent", "width": 120},
+			{
+				"label": _("Total Taxable Amount"),
+				"fieldname": "total_amount",
+				"fieldtype": "Float",
+				"width": 120,
+			},
+			{"label": _("Tax Amount"), "fieldname": "tax_amount", "fieldtype": "Float", "width": 120},
+		]
 
-	for row in data:
-		supplier_category_wise_map.setdefault((row.get('supplier'), row.get('section_code')), {
-			'pan': row.get('pan'),
-			'supplier': row.get('supplier'),
-			'supplier_name': row.get('supplier_name'),
-			'section_code': row.get('section_code'),
-			'entity_type': row.get('entity_type'),
-			'tds_rate': row.get('tds_rate'),
-			'total_amount_credited': 0.0,
-			'tds_deducted': 0.0
-		})
 
-		supplier_category_wise_map.get((row.get('supplier'), row.get('section_code')))['total_amount_credited'] += \
-			row.get('total_amount_credited', 0.0)
-
-		supplier_category_wise_map.get((row.get('supplier'), row.get('section_code')))['tds_deducted'] += \
-			row.get('tds_deducted', 0.0)
-
-	final_result = get_final_result(supplier_category_wise_map)
-
-	return final_result
-
-
-def get_final_result(supplier_category_wise_map):
-	out = []
-	for key, value in supplier_category_wise_map.items():
-		out.append(value)
-
-	return out
-
-def get_columns(filters):
-	columns = [
-		{
-			"label": _("PAN"),
-			"fieldname": "pan",
-			"fieldtype": "Data",
-			"width": 90
-		},
-		{
-			"label": _("Supplier"),
-			"options": "Supplier",
-			"fieldname": "supplier",
-			"fieldtype": "Link",
-			"width": 180
-		}]
-
-	if filters.naming_series == 'Naming Series':
-		columns.append({
-			"label": _("Supplier Name"),
-			"fieldname": "supplier_name",
-			"fieldtype": "Data",
-			"width": 180
-		})
-
-	columns.extend([
-		{
-			"label": _("Section Code"),
-			"options": "Tax Withholding Category",
-			"fieldname": "section_code",
-			"fieldtype": "Link",
-			"width": 180
-		},
-		{
-			"label": _("Entity Type"),
-			"fieldname": "entity_type",
-			"fieldtype": "Data",
-			"width": 180
-		},
-		{
-			"label": _("TDS Rate %"),
-			"fieldname": "tds_rate",
-			"fieldtype": "Percent",
-			"width": 90
-		},
-		{
-			"label": _("Total Amount Credited"),
-			"fieldname": "total_amount_credited",
-			"fieldtype": "Float",
-			"width": 90
-		},
-		{
-			"label": _("Amount of TDS Deducted"),
-			"fieldname": "tds_deducted",
-			"fieldtype": "Float",
-			"width": 90
-		}
-	])
-
-	return columns
+execute = TDSComputationSummaryReport.execute

@@ -3,165 +3,85 @@
 
 
 import frappe
-from frappe import _, msgprint
+from frappe import _
+from frappe.query_builder import Case
+
+from erpnext.selling.report.sales_partner_commission_summary.sales_partner_commission_summary import (
+	SalesPartnerSummaryReport,
+)
 
 
 def execute(filters=None):
-	if not filters: filters = {}
+	if not filters:
+		filters = {}
 
-	columns = get_columns(filters)
-	data = get_entries(filters)
-
-	return columns, data
-
-def get_columns(filters):
-	if not filters.get("doctype"):
-		msgprint(_("Please select the document type first"), raise_exception=1)
-
-	columns =[
-		{
-			"label": _(filters["doctype"]),
-			"options": filters["doctype"],
-			"fieldname": "name",
-			"fieldtype": "Link",
-			"width": 140
-		},
-		{
-			"label": _("Customer"),
-			"options": "Customer",
-			"fieldname": "customer",
-			"fieldtype": "Link",
-			"width": 140
-		},
-		{
-			"label": _("Territory"),
-			"options": "Territory",
-			"fieldname": "territory",
-			"fieldtype": "Link",
-			"width": 100
-		},
-		{
-			"label": _("Posting Date"),
-			"fieldname": "posting_date",
-			"fieldtype": "Date",
-			"width": 100
-		},
-		{
-			"label": _("Item Code"),
-			"fieldname": "item_code",
-			"fieldtype": "Link",
-			"options": "Item",
-			"width": 100
-		},
-		{
-			"label": _("Item Group"),
-			"fieldname": "item_group",
-			"fieldtype": "Link",
-			"options": "Item Group",
-			"width": 100
-		},
-		{
-			"label": _("Brand"),
-			"fieldname": "brand",
-			"fieldtype": "Link",
-			"options": "Brand",
-			"width": 100
-		},
-		{
-			"label": _("Quantity"),
-			"fieldname": "qty",
-			"fieldtype": "Float",
-			"width": 120
-		},
-		{
-			"label": _("Rate"),
-			"fieldname": "rate",
-			"fieldtype": "Currency",
-			"width": 120
-		},
-		{
-			"label": _("Amount"),
-			"fieldname": "amount",
-			"fieldtype": "Currency",
-			"width": 120
-		},
-		{
-			"label": _("Sales Partner"),
-			"options": "Sales Partner",
-			"fieldname": "sales_partner",
-			"fieldtype": "Link",
-			"width": 140
-		},
-		{
-			"label": _("Commission Rate %"),
-			"fieldname": "commission_rate",
-			"fieldtype": "Data",
-			"width": 100
-		},
-		{
-			"label": _("Commission"),
-			"fieldname": "commission",
-			"fieldtype": "Currency",
-			"width": 120
-		},
-		{
-			"label": _("Currency"),
-			"fieldname": "currency",
-			"fieldtype": "Link",
-			"options": "Currency",
-			"width": 120
-		}
-	]
-
-	return columns
-
-def get_entries(filters):
-	date_field = ("transaction_date" if filters.get('doctype') == "Sales Order"
-		else "posting_date")
-
-	conditions = get_conditions(filters, date_field)
-	entries = frappe.db.sql("""
-		SELECT
-			dt.name, dt.customer, dt.territory, dt.{date_field} as posting_date, dt.currency,
-			dt_item.base_net_rate as rate, dt_item.qty, dt_item.base_net_amount as amount,
-			((dt_item.base_net_amount * dt.commission_rate) / 100) as commission,
-			dt_item.brand, dt.sales_partner, dt.commission_rate, dt_item.item_group, dt_item.item_code
-		FROM
-			`tab{doctype}` dt, `tab{doctype} Item` dt_item
-		WHERE
-			{cond} and dt.name = dt_item.parent and dt.docstatus = 1
-			and dt.sales_partner is not null and dt.sales_partner != ''
-			order by dt.name desc, dt.sales_partner
-		""".format(date_field=date_field, doctype=filters.get('doctype'),
-			cond=conditions), filters, as_dict=1)
-
-	return entries
-
-def get_conditions(filters, date_field):
-	conditions = "1=1"
-
-	for field in ["company", "customer", "territory", "sales_partner"]:
-		if filters.get(field):
-			conditions += " and dt.{0} = %({1})s".format(field, field)
-
-	if filters.get("from_date"):
-		conditions += " and dt.{0} >= %(from_date)s".format(date_field)
-
-	if filters.get("to_date"):
-		conditions += " and dt.{0} <= %(to_date)s".format(date_field)
-
-	if not filters.get('show_return_entries'):
-		conditions += " and dt_item.qty > 0.0"
-
-	if filters.get('brand'):
-		conditions += " and dt_item.brand = %(brand)s"
-
-	if filters.get('item_group'):
-		lft, rgt = frappe.get_cached_value('Item Group',
-			filters.get('item_group'), ['lft', 'rgt'])
-
-		conditions += """ and dt_item.item_group in (select name from
-			`tabItem Group` where lft >= %s and rgt <= %s)""" % (lft, rgt)
+	return SalesPartnerTransactionSummaryReport(filters=filters).run()
 
 
-	return conditions
+class SalesPartnerTransactionSummaryReport(SalesPartnerSummaryReport):
+	def prepare_columns(self):
+		self.make_column(_(self.filters.get("doctype")), "name", "Link", options=self.filters.get("doctype"))
+
+		self.make_column(_("Customer"), "customer", "Link", options="Customer")
+
+		self.make_column(_("Currency"), "currency", "Data", 80, hidden=1)
+
+		self.make_column(_("Territory"), "territory", "Link", 100, "Territory")
+
+		self.make_column(self.date_label, "posting_date", "Date")
+
+		self.make_column(_("Item Code"), "item_code", "Link", 100, "Item")
+
+		self.make_column(_("Item Group"), "item_group", "Link", 100, "Item Group")
+
+		self.make_column(_("Brand"), "brand", "Link", 100, "Brand")
+
+		self.make_column(_("Quantity"), "qty", "Float", 120)
+
+		self.make_column(_("Rate"), "rate", "Currency", 120, "currency")
+
+		self.make_column(_("Amount"), "amount", "Currency", 120, "currency")
+
+		self.make_column(_("Sales Partner"), "sales_partner", "Link", options="Sales Partner")
+
+		self.make_column(_("Commission Rate %"), "commission_rate", "Data", 100)
+
+		self.make_column(_("Commission"), "commission", "Currency", 120, "currency")
+
+	def extend_report_query(self):
+		self.dt_item = frappe.qb.DocType(f"{self.filters['doctype']} Item")
+
+		self.query = (
+			self.query.join(self.dt_item)
+			.on(self.dt.name == self.dt_item.parent)
+			.select(
+				self.dt_item.base_net_rate.as_("rate"),
+				self.dt_item.qty,
+				self.dt_item.base_net_amount.as_("amount"),
+				Case()
+				.when(
+					self.dt_item.grant_commission.eq(1),
+					((self.dt_item.base_net_amount * self.dt.commission_rate) / 100),
+				)
+				.else_(0)
+				.as_("commission"),
+				self.dt_item.brand,
+				self.dt_item.item_group,
+				self.dt_item.item_code,
+			)
+		)
+
+	def apply_filters(self):
+		# fall back to the old key so saved reports (e.g. Auto Email Report) keep their behaviour
+		if not self.filters.get("account_for_return_entries", self.filters.get("show_return_entries")):
+			self.query = self.query.where(self.dt_item.qty > 0.0)
+
+		if self.filters.get("brand"):
+			self.query = self.query.where(self.dt_item.brand == self.filters.get("brand"))
+
+		if self.filters.get("item_group"):
+			lft, rgt = frappe.get_cached_value("Item Group", self.filters.get("item_group"), ["lft", "rgt"])
+			if item_groups := frappe.get_all(
+				"Item Group", filters=[["lft", ">=", lft], ["rgt", "<=", rgt]], pluck="name"
+			):
+				self.query = self.query.where(self.dt_item.item_group.isin(item_groups))

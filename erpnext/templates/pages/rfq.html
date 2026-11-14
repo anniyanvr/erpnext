@@ -1,7 +1,7 @@
 {% extends "templates/web.html" %}
 
 {% block header %}
-<h1>{{ doc.name }}</h1>
+<h1 style="margin-top: 10px;">{{ doc.name }}</h1>
 {% endblock %}
 
 {% block script %}
@@ -13,19 +13,16 @@
 {% endblock %}
 
 {% block header_actions %}
-{% if doc.items %}
+{% if doc.items and not doc.rfq_links %}
 <button class="btn btn-primary btn-sm"
     type="button">
-    {{ _("Submit") }}</button>
+    {{ _("Make Quotation") }}</button>
 {% endif %}
 {% endblock %}
 
 {% block page_content %}
 <div class="row">
-    <div class="col-6">
-        <div class="rfq-supplier">{{ doc.supplier }}</div>
-	</div>
-    <div class="col-6 text-muted text-right h6">
+    <div class="col-12 text-muted text-right h6">
         {{ doc.get_formatted("transaction_date") }}
     </div>
 </div>

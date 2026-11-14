@@ -1,11 +1,14 @@
 {
+ "actions": [],
+ "allow_bulk_edit": 1,
  "allow_copy": 1,
- "beta": 1,
  "creation": "2017-08-29 02:22:54.947711",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/opening-invoice-creation-tool",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "section_break_ynel",
   "company",
   "create_missing_party",
   "column_break_3",
@@ -13,6 +16,7 @@
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
+  "project",
   "section_break_4",
   "invoices"
  ],
@@ -23,11 +27,11 @@
    "in_list_view": 1,
    "label": "Company",
    "options": "Company",
+   "remember_last_selected_value": 1,
    "reqd": 1
   },
   {
    "default": "0",
-   "description": "Create missing customer or supplier.",
    "fieldname": "create_missing_party",
    "fieldtype": "Check",
    "label": "Create Missing Party"
@@ -63,6 +67,12 @@
    "options": "Cost Center"
   },
   {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
    "collapsible": 1,
    "fieldname": "accounting_dimensions_section",
    "fieldtype": "Section Break",
@@ -71,11 +81,18 @@
   {
    "fieldname": "dimension_col_break",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_ynel",
+   "fieldtype": "Section Break",
+   "hide_border": 1
   }
  ],
  "hide_toolbar": 1,
+ "icon": "file-plus",
  "issingle": 1,
- "modified": "2019-07-25 14:57:33.187689",
+ "links": [],
+ "modified": "2026-05-30 23:18:48.691227",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Opening Invoice Creation Tool",
@@ -92,7 +109,9 @@
   }
  ],
  "quick_entry": 1,
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

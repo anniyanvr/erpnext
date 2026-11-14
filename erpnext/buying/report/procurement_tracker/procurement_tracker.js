@@ -1,9 +1,8 @@
 // Copyright (c) 2016, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
-/* eslint-disable */
 
 frappe.query_reports["Procurement Tracker"] = {
-	"filters": [
+	filters: [
 		{
 			fieldname: "company",
 			label: __("Company"),
@@ -14,8 +13,12 @@ frappe.query_reports["Procurement Tracker"] = {
 		{
 			fieldname: "cost_center",
 			label: __("Cost Center"),
-			fieldtype: "Link",
+			fieldtype: "MultiSelectList",
 			options: "Cost Center",
+			get_data: function (txt) {
+				let company = frappe.query_report.get_filter_value("company");
+				return erpnext.utils.get_link_options("Cost Center", txt, company ? { company } : {});
+			},
 		},
 		{
 			fieldname: "project",
@@ -27,13 +30,18 @@ frappe.query_reports["Procurement Tracker"] = {
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
-			default: frappe.defaults.get_user_default("year_start_date"),
+			default: erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true)[1],
 		},
 		{
-			fieldname:"to_date",
+			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
-			default: frappe.defaults.get_user_default("year_end_date"),
+			default: erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true)[2],
 		},
-	]
-}
+		{
+			fieldname: "show_completed_orders",
+			label: __("Show Completed Orders"),
+			fieldtype: "Check",
+		},
+	],
+};

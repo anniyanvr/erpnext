@@ -1,7 +1,10 @@
 {
+ "actions": [],
  "autoname": "naming_series:",
  "creation": "2017-12-25 16:50:53.878430",
+ "description": "A person or company that owns shares in your company.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/shareholder",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -111,11 +114,13 @@
    "read_only": 1
   }
  ],
- "modified": "2019-11-17 23:24:11.395882",
+ "icon": "user-star",
+ "links": [],
+ "modified": "2024-03-27 13:10:40.356171",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Shareholder",
- "name_case": "Title Case",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -156,8 +161,9 @@
   }
  ],
  "search_fields": "folio_no",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "title",
  "track_changes": 1
 }

@@ -1,8 +1,9 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "autoname": "format:Bank Statement Import on {creation}",
- "beta": 1,
  "creation": "2019-08-04 14:16:08.318714",
+ "description": "Bring in a bank statement to match its lines against your books.",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -11,6 +12,9 @@
   "bank_account",
   "bank",
   "column_break_4",
+  "import_mt940_fromat",
+  "custom_delimiters",
+  "delimiter_options",
   "google_sheets_url",
   "refresh_google_sheet",
   "html_5",
@@ -18,13 +22,13 @@
   "download_template",
   "status",
   "template_options",
+  "use_csv_sniffer",
   "import_warnings_section",
   "template_warnings",
   "import_warnings",
   "section_import_preview",
   "import_preview",
   "import_log_section",
-  "import_log",
   "show_failed_logs",
   "import_log_preview",
   "reference_doctype",
@@ -89,12 +93,6 @@
    "label": "Template Options",
    "options": "JSON",
    "read_only": 1
-  },
-  {
-   "fieldname": "import_log",
-   "fieldtype": "Code",
-   "label": "Import Log",
-   "options": "JSON"
   },
   {
    "fieldname": "import_log_section",
@@ -198,14 +196,43 @@
   {
    "fieldname": "column_break_4",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "custom_delimiters",
+   "fieldtype": "Check",
+   "label": "Custom delimiters"
+  },
+  {
+   "default": ",;\\t|",
+   "depends_on": "custom_delimiters",
+   "description": "If your CSV uses a different delimiter, add that character here, ensuring no spaces or additional characters are included.",
+   "fieldname": "delimiter_options",
+   "fieldtype": "Data",
+   "label": "Delimiter options"
+  },
+  {
+   "default": "0",
+   "fieldname": "use_csv_sniffer",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Use CSV Sniffer"
+  },
+  {
+   "default": "0",
+   "fieldname": "import_mt940_fromat",
+   "fieldtype": "Check",
+   "label": "Import MT940 Format"
   }
  ],
  "hide_toolbar": 1,
+ "icon": "file-down",
  "links": [],
- "modified": "2021-05-12 14:17:37.777246",
+ "modified": "2026-06-19 14:18:00.000000",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Bank Statement Import",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
@@ -221,7 +248,9 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

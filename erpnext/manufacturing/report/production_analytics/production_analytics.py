@@ -4,140 +4,118 @@
 
 import frappe
 from frappe import _, scrub
-from frappe.utils import getdate
+from frappe.utils import get_datetime, getdate, today
 
-from erpnext.stock.report.stock_analytics.stock_analytics import get_period, get_period_date_ranges
+from erpnext.accounts.report.utils import validate_date_range
+from erpnext.stock.report.stock_analytics.stock_analytics import (
+	get_period,
+	get_period_columns,
+	get_period_date_ranges,
+)
+
+WORK_ORDER_STATUS_LIST = ["Not Started", "Overdue", "Pending", "Completed", "Closed", "Stopped"]
 
 
 def execute(filters=None):
-	columns = get_columns(filters)
-	data, chart = get_data(filters, columns)
-	return columns, data, None , chart
+	validate_date_range(filters)
 
-def get_columns(filters):
-	columns =[
-		{
-			"label": _("Status"),
-			"fieldname": "Status",
-			"fieldtype": "Data",
-			"width": 140
-		}]
+	period_columns = get_period_columns(filters)
+	columns = get_columns(period_columns)
+	data, chart = get_data(filters, period_columns)
+	return columns, data, None, chart
 
-	ranges = get_period_date_ranges(filters)
 
-	for dummy, end_date in ranges:
-
-		period = get_period(end_date, filters)
-
-		columns.append({
-			"label": _(period),
-			"fieldname": scrub(period),
-			"fieldtype": "Float",
-			"width": 120
-		})
+def get_columns(period_columns):
+	columns = [{"label": _("Status"), "fieldname": "status", "fieldtype": "Data", "width": 140}]
+	columns.extend(period_columns)
 
 	return columns
 
-def get_periodic_data(filters, entry):
-	periodic_data = {
-		"All Work Orders": {},
-		"Not Started": {},
-		"Overdue": {},
-		"Pending": {},
-		"Completed": {}
-	}
 
-	ranges = get_period_date_ranges(filters)
+def get_work_orders(filters):
+	from_date = filters.get("from_date")
+	# `creation` and `actual_end_date` are datetime columns, so a bare date upper
+	# bound would coerce to midnight and drop records created later on the last day.
+	to_date = get_datetime(filters.get("to_date")).replace(hour=23, minute=59, second=59)
 
-	for from_date, end_date in ranges:
-		period = get_period(end_date, filters)
-		for d in entry:
-			if getdate(d.creation) <= getdate(from_date) or getdate(d.creation) <= getdate(end_date) :
-				periodic_data = update_periodic_data(periodic_data, "All Work Orders", period)
-				if d.status == 'Completed':
-					if getdate(d.actual_end_date) < getdate(from_date) or getdate(d.modified) < getdate(from_date):
-						periodic_data = update_periodic_data(periodic_data, "Completed", period)
-					elif getdate(d.actual_start_date) < getdate(from_date) :
-						periodic_data = update_periodic_data(periodic_data, "Pending", period)
-					elif getdate(d.planned_start_date) < getdate(from_date) :
-						periodic_data = update_periodic_data(periodic_data, "Overdue", period)
-					else:
-						periodic_data = update_periodic_data(periodic_data, "Not Started", period)
+	WorkOrder = frappe.qb.DocType("Work Order")
 
-				elif d.status == 'In Process':
-					if getdate(d.actual_start_date) < getdate(from_date) :
-						periodic_data = update_periodic_data(periodic_data, "Pending", period)
-					elif getdate(d.planned_start_date) < getdate(from_date) :
-						periodic_data = update_periodic_data(periodic_data, "Overdue", period)
-					else:
-						periodic_data = update_periodic_data(periodic_data, "Not Started", period)
+	return (
+		frappe.qb.get_query(
+			"Work Order",
+			fields=["creation", "actual_end_date", "planned_end_date", "status"],
+			filters={"docstatus": 1, "company": filters.get("company")},
+			ignore_permissions=False,
+		)
+		.where(
+			(WorkOrder.creation.between(from_date, to_date))
+			| (WorkOrder.actual_end_date.between(from_date, to_date))
+		)
+		.run(as_dict=True)
+	)
 
-				elif d.status == 'Not Started':
-					if getdate(d.planned_start_date) < getdate(from_date) :
-						periodic_data = update_periodic_data(periodic_data, "Overdue", period)
-					else:
-						periodic_data = update_periodic_data(periodic_data, "Not Started", period)
 
-	return periodic_data
+def get_data(filters, period_columns):
+	ranges = build_ranges(filters)
+	period_labels = [scrub(pd) for _fd, _td, pd in ranges]
+	periodic_data = {status: {pd: 0 for pd in period_labels} for status in WORK_ORDER_STATUS_LIST}
+	entries = get_work_orders(filters)
 
-def update_periodic_data(periodic_data, status, period):
-	if periodic_data.get(status).get(period):
-		periodic_data[status][period] += 1
-	else:
-		periodic_data[status][period] = 1
+	for d in entries:
+		if d.status == "Completed":
+			if not d.actual_end_date:
+				continue
 
-	return periodic_data
+			if period := scrub(get_period_for_date(getdate(d.actual_end_date), ranges)):
+				periodic_data["Completed"][period] += 1
+			continue
 
-def get_data(filters, columns):
-	data = []
-	entry = frappe.get_all("Work Order",
-		fields=["creation", "modified", "actual_start_date", "actual_end_date", "planned_start_date", "planned_end_date", "status"],
-		filters={"docstatus": 1, "company": filters["company"] })
+		creation_date = getdate(d.creation)
+		period = scrub(get_period_for_date(creation_date, ranges))
+		if not period:
+			continue
 
-	periodic_data = get_periodic_data(filters,entry)
-
-	labels = ["All Work Orders", "Not Started", "Overdue", "Pending", "Completed"]
-	chart_data = get_chart_data(periodic_data,columns)
-	ranges = get_period_date_ranges(filters)
-
-	for label in labels:
-		work = {}
-		work["Status"] = label
-		for dummy,end_date in ranges:
-			period = get_period(end_date, filters)
-			if periodic_data.get(label).get(period):
-				work[scrub(period)] = periodic_data.get(label).get(period)
+		if d.status in ("Not Started", "Closed", "Stopped"):
+			periodic_data[d.status][period] += 1
+		else:
+			if d.planned_end_date and getdate(today()) > getdate(d.planned_end_date):
+				periodic_data["Overdue"][period] += 1
 			else:
-				work[scrub(period)] = 0.0
-		data.append(work)
+				periodic_data["Pending"][period] += 1
 
-	return data, chart_data
+	data = []
+	for status in WORK_ORDER_STATUS_LIST:
+		row = {"status": _(status)}
+		for _fd, _td, period in ranges:
+			row[scrub(period)] = periodic_data[status].get(scrub(period), 0)
+		data.append(row)
 
-def get_chart_data(periodic_data, columns):
-	labels = [d.get("label") for d in columns[1:]]
+	chart = get_chart_data(periodic_data, period_columns)
+	return data, chart
 
-	all_data, not_start, overdue, pending, completed = [], [], [] , [], []
+
+def get_period_for_date(date, ranges):
+	for from_date, to_date, period in ranges:
+		if from_date <= date <= to_date:
+			return period
+	return None
+
+
+def build_ranges(filters):
+	ranges = []
+	for from_date, end_date in get_period_date_ranges(filters):
+		period = get_period(end_date, filters)
+		ranges.append((getdate(from_date), getdate(end_date), period))
+	return ranges
+
+
+def get_chart_data(periodic_data, period_columns):
+	period_labels = [col.get("label") for col in period_columns]
+	period_fieldnames = [col.get("fieldname") for col in period_columns]
+
 	datasets = []
+	for status in WORK_ORDER_STATUS_LIST:
+		values = [periodic_data.get(status, {}).get(fieldname, 0) for fieldname in period_fieldnames]
+		datasets.append({"name": _(status), "values": values})
 
-	for d in labels:
-		all_data.append(periodic_data.get("All Work Orders").get(d))
-		not_start.append(periodic_data.get("Not Started").get(d))
-		overdue.append(periodic_data.get("Overdue").get(d))
-		pending.append(periodic_data.get("Pending").get(d))
-		completed.append(periodic_data.get("Completed").get(d))
-
-	datasets.append({'name':'All Work Orders', 'values': all_data})
-	datasets.append({'name':'Not Started', 'values': not_start})
-	datasets.append({'name':'Overdue', 'values': overdue})
-	datasets.append({'name':'Pending', 'values': pending})
-	datasets.append({'name':'Completed', 'values': completed})
-
-	chart = {
-		"data": {
-			'labels': labels,
-			'datasets': datasets
-		}
-	}
-	chart["type"] = "line"
-
-	return chart
+	return {"data": {"labels": period_labels, "datasets": datasets}, "type": "line"}

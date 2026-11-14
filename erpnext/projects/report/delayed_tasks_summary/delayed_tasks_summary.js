@@ -1,33 +1,38 @@
 // Copyright (c) 2016, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
-/* eslint-disable */
 
 frappe.query_reports["Delayed Tasks Summary"] = {
-	"filters": [
+	filters: [
 		{
-			"fieldname": "from_date",
-			"label": __("From Date"),
-			"fieldtype": "Date"
+			fieldname: "project",
+			label: __("Project"),
+			fieldtype: "Link",
+			options: "Project",
 		},
 		{
-			"fieldname": "to_date",
-			"label": __("To Date"),
-			"fieldtype": "Date"
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
 		},
 		{
-			"fieldname": "priority",
-			"label": __("Priority"),
-			"fieldtype": "Select",
-			"options": ["", "Low", "Medium", "High", "Urgent"]
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
 		},
 		{
-			"fieldname": "status",
-			"label": __("Status"),
-			"fieldtype": "Select",
-			"options": ["", "Open", "Working","Pending Review","Overdue","Completed"]
+			fieldname: "priority",
+			label: __("Priority"),
+			fieldtype: "Select",
+			options: ["", "Low", "Medium", "High", "Urgent"],
+		},
+		{
+			fieldname: "status",
+			label: __("Status"),
+			fieldtype: "Select",
+			options: ["", "Open", "Working", "Pending Review", "Overdue", "Completed"],
 		},
 	],
-	"formatter": function(value, row, column, data, default_formatter) {
+	formatter: function (value, row, column, data, default_formatter) {
 		value = default_formatter(value, row, column, data);
 		if (column.id == "delay") {
 			if (data["delay"] > 0) {
@@ -36,6 +41,6 @@ frappe.query_reports["Delayed Tasks Summary"] = {
 				value = `<p style="color: green; font-weight: bold">${value}</p>`;
 			}
 		}
-		return value
-	}
+		return value;
+	},
 };

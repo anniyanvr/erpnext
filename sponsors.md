@@ -42,7 +42,7 @@
 				<a href="http://www.gps.gt">Startrack</a>
 			</td>
 			<td>
-				Delivery to Target Warehouse <a href="https://github.com/frappe/erpnext/issues/3970">#3546</a>
+				Delivery to Target Warehouse <a href="https://github.com/frappe/erpnext/issues/3970">#3970</a>
 			</td>
 		</tr>
 		<tr>
@@ -58,7 +58,15 @@
 				<a href="http://agtech.com.sq">AG Technologies, Singapore</a>
 			</td>
 			<td>
-				Bulk edit via export-import in Bank Reconciliation <a href="https://github.com/frappe/erpnext/issues/1938">#4356</a>
+				Bulk edit via export-import in Bank Reconciliation <a href="https://github.com/frappe/erpnext/issues/4356">#4356</a>
+			</td>
+		</tr>
+		<tr>
+			<td style="width: 30%">
+				<a href="https://www.sapconinstruments.com/">Sapcon Instruments Pvt Ltd</a>
+			</td>
+			<td>
+				Level wise BOM Cost Updation and Performance Enhancement <a href="https://github.com/frappe/erpnext/pull/31072">#31072</a>
 			</td>
 		</tr>
 	</tbody>

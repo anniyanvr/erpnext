@@ -7,37 +7,52 @@ from frappe import _
 from frappe.utils import cint
 from frappe.utils.nestedset import NestedSet
 
-from erpnext.accounts.utils import validate_field_number
-
 
 class CostCenter(NestedSet):
-	nsm_parent_field = 'parent_cost_center'
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		company: DF.Link
+		cost_center_name: DF.Data
+		cost_center_number: DF.Data | None
+		disabled: DF.Check
+		is_group: DF.Check
+		lft: DF.Int
+		old_parent: DF.Link | None
+		parent_cost_center: DF.Link
+		rgt: DF.Int
+	# end: auto-generated types
+
+	nsm_parent_field = "parent_cost_center"
 
 	def autoname(self):
 		from erpnext.accounts.utils import get_autoname_with_number
-		self.name = get_autoname_with_number(self.cost_center_number, self.cost_center_name, None, self.company)
+
+		self.name = get_autoname_with_number(self.cost_center_number, self.cost_center_name, self.company)
 
 	def validate(self):
+		self.validate_changes()
 		self.validate_mandatory()
 		self.validate_parent_cost_center()
-		self.validate_distributed_cost_center()
 
-	def validate_distributed_cost_center(self):
-		if cint(self.enable_distributed_cost_center):
-			if not self.distributed_cost_center:
-				frappe.throw(_("Please enter distributed cost center"))
-			if sum(x.percentage_allocation for x in self.distributed_cost_center) != 100:
-				frappe.throw(_("Total percentage allocation for distributed cost center should be equal to 100"))
-			if not self.get('__islocal'):
-				if not cint(frappe.get_cached_value("Cost Center", {"name": self.name}, "enable_distributed_cost_center")) \
-					and self.check_if_part_of_distributed_cost_center():
-					frappe.throw(_("Cannot enable Distributed Cost Center for a Cost Center already allocated in another Distributed Cost Center"))
-				if next((True for x in self.distributed_cost_center if x.cost_center == x.parent), False):
-					frappe.throw(_("Parent Cost Center cannot be added in Distributed Cost Center"))
-			if check_if_distributed_cost_center_enabled(list(x.cost_center for x in self.distributed_cost_center)):
-				frappe.throw(_("A Distributed Cost Center cannot be added in the Distributed Cost Center allocation table."))
-		else:
-			self.distributed_cost_center = []
+	def validate_changes(self):
+		previous = self.get_doc_before_save()
+		if not previous:
+			return
+
+		if self.company != previous.company:
+			frappe.throw(_("Company cannot be changed for an existing Cost Center"))
+
+		if cint(self.is_group) != cint(previous.is_group):
+			if cint(self.is_group):
+				self.validate_ledger_to_group()
+			else:
+				self.validate_group_to_ledger()
 
 	def validate_mandatory(self):
 		if self.cost_center_name != self.company and not self.parent_cost_center:
@@ -47,87 +62,100 @@ class CostCenter(NestedSet):
 
 	def validate_parent_cost_center(self):
 		if self.parent_cost_center:
-			if not frappe.db.get_value('Cost Center', self.parent_cost_center, 'is_group'):
-				frappe.throw(_("{0} is not a group node. Please select a group node as parent cost center").format(
-					frappe.bold(self.parent_cost_center)))
+			parent = frappe.db.get_value(
+				"Cost Center", self.parent_cost_center, ["is_group", "company"], as_dict=True
+			)
+			if not parent or not parent.is_group:
+				frappe.throw(
+					_("{0} is not a group node. Please select a group node as parent cost center").format(
+						frappe.bold(self.parent_cost_center)
+					)
+				)
+			if parent.company != self.company:
+				frappe.throw(_("Parent Cost Center must belong to the same Company"))
 
 	@frappe.whitelist()
 	def convert_group_to_ledger(self):
+		self.is_group = 0
+		self.save()
+		return 1
+
+	@frappe.whitelist()
+	def convert_ledger_to_group(self):
+		self.is_group = 1
+		self.save()
+		return 1
+
+	def validate_group_to_ledger(self):
 		if self.check_if_child_exists():
 			frappe.throw(_("Cannot convert Cost Center to ledger as it has child nodes"))
 		elif self.check_gle_exists():
 			frappe.throw(_("Cost Center with existing transactions can not be converted to ledger"))
-		else:
-			self.is_group = 0
-			self.save()
-			return 1
 
-	@frappe.whitelist()
-	def convert_ledger_to_group(self):
-		if cint(self.enable_distributed_cost_center):
-			frappe.throw(_("Cost Center with enabled distributed cost center can not be converted to group"))
-		if self.check_if_part_of_distributed_cost_center():
-			frappe.throw(_("Cost Center Already Allocated in a Distributed Cost Center cannot be converted to group"))
+	def validate_ledger_to_group(self):
+		if self.if_allocation_exists_against_cost_center():
+			frappe.throw(_("Cost Center with Allocation records can not be converted to a group"))
+		if self.check_if_part_of_cost_center_allocation():
+			frappe.throw(
+				_("Cost Center is a part of Cost Center Allocation, hence cannot be converted to a group")
+			)
 		if self.check_gle_exists():
 			frappe.throw(_("Cost Center with existing transactions can not be converted to group"))
-		self.is_group = 1
-		self.save()
-		return 1
 
 	def check_gle_exists(self):
 		return frappe.db.get_value("GL Entry", {"cost_center": self.name})
 
 	def check_if_child_exists(self):
-		return frappe.db.sql("select name from `tabCost Center` where \
-			parent_cost_center = %s and docstatus != 2", self.name)
+		return frappe.get_all(
+			"Cost Center",
+			filters={"parent_cost_center": self.name, "docstatus": ["!=", 2]},
+			pluck="name",
+		)
 
-	def check_if_part_of_distributed_cost_center(self):
-		return frappe.db.get_value("Distributed Cost Center", {"cost_center": self.name})
+	def if_allocation_exists_against_cost_center(self):
+		return frappe.db.get_value(
+			"Cost Center Allocation", filters={"main_cost_center": self.name, "docstatus": 1}
+		)
+
+	def check_if_part_of_cost_center_allocation(self):
+		return frappe.db.get_value(
+			"Cost Center Allocation Percentage", filters={"cost_center": self.name, "docstatus": 1}
+		)
 
 	def before_rename(self, olddn, newdn, merge=False):
 		# Add company abbr if not provided
 		from erpnext.setup.doctype.company.company import get_name_with_abbr
+
 		new_cost_center = get_name_with_abbr(newdn, self.company)
 
 		# Validate properties before merging
-		super(CostCenter, self).before_rename(olddn, new_cost_center, merge, "is_group")
+		super().before_rename(olddn, new_cost_center, merge, "is_group")
 		if not merge:
 			new_cost_center = get_name_with_number(new_cost_center, self.cost_center_number)
 
 		return new_cost_center
 
 	def after_rename(self, olddn, newdn, merge=False):
-		super(CostCenter, self).after_rename(olddn, newdn, merge)
+		super().after_rename(olddn, newdn, merge)
 
 		if not merge:
-			new_cost_center = frappe.db.get_value("Cost Center", newdn, ["cost_center_name", "cost_center_number"], as_dict=1)
+			new_cost_center = frappe.db.get_value(
+				"Cost Center", newdn, ["cost_center_name", "cost_center_number"], as_dict=1
+			)
 
-			# exclude company abbr
-			new_parts = newdn.split(" - ")[:-1]
-			# update cost center number and remove from parts
-			if new_parts[0][0].isdigit():
-				if len(new_parts) == 1:
-					new_parts = newdn.split(" ")
-				if new_cost_center.cost_center_number != new_parts[0]:
-					validate_field_number("Cost Center", self.name, new_parts[0], self.company, "cost_center_number")
-					self.cost_center_number = new_parts[0]
-					self.db_set("cost_center_number", new_parts[0])
-				new_parts = new_parts[1:]
-
-			# update cost center name
-			cost_center_name = " - ".join(new_parts)
+			cost_center_name = newdn.rsplit(" - ", 1)[0]
+			if new_cost_center.cost_center_number:
+				cost_center_name = cost_center_name.removeprefix(f"{new_cost_center.cost_center_number} - ")
 			if new_cost_center.cost_center_name != cost_center_name:
 				self.cost_center_name = cost_center_name
 				self.db_set("cost_center_name", cost_center_name)
 
+
 def on_doctype_update():
 	frappe.db.add_index("Cost Center", ["lft", "rgt"])
 
+
 def get_name_with_number(new_account, account_number):
-	if account_number and not new_account[0].isdigit():
+	if account_number and not new_account.startswith(f"{account_number} - "):
 		new_account = account_number + " - " + new_account
 	return new_account
-
-def check_if_distributed_cost_center_enabled(cost_center_list):
-	value_list = frappe.get_list("Cost Center", {"name": ["in", cost_center_list]}, "enable_distributed_cost_center", as_list=1)
-	return next((True for x in value_list if x[0]), False)

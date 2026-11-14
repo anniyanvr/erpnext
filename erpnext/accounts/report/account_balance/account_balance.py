@@ -5,7 +5,7 @@
 import frappe
 from frappe import _
 
-from erpnext.accounts.utils import get_balance_on
+from erpnext.accounts.utils import get_balance_on, get_fiscal_year
 
 
 def execute(filters=None):
@@ -14,6 +14,7 @@ def execute(filters=None):
 	data = get_data(filters)
 	return columns, data
 
+
 def get_columns(filters):
 	columns = [
 		{
@@ -21,7 +22,7 @@ def get_columns(filters):
 			"fieldtype": "Link",
 			"fieldname": "account",
 			"options": "Account",
-			"width": 100
+			"width": 200,
 		},
 		{
 			"label": _("Currency"),
@@ -29,25 +30,25 @@ def get_columns(filters):
 			"fieldname": "currency",
 			"options": "Currency",
 			"hidden": 1,
-			"width": 50
+			"width": 100,
 		},
 		{
 			"label": _("Balance"),
 			"fieldtype": "Currency",
 			"fieldname": "balance",
 			"options": "currency",
-			"width": 100
-		}
+			"width": 100,
+		},
 	]
 
 	return columns
+
 
 def get_conditions(filters):
 	conditions = {}
 
 	if filters.account_type:
 		conditions["account_type"] = filters.account_type
-		return conditions
 
 	if filters.company:
 		conditions["company"] = filters.company
@@ -57,17 +58,34 @@ def get_conditions(filters):
 
 	return conditions
 
-def get_data(filters):
 
+def get_data(filters):
 	data = []
 	conditions = get_conditions(filters)
-	accounts = frappe.db.get_all("Account", fields=["name", "account_currency"],
-		filters=conditions, order_by='name')
+	accounts = frappe.get_list(
+		"Account",
+		fields=["name", "account_currency", "report_type", "company"],
+		filters=conditions,
+		order_by="name",
+	)
 
 	for d in accounts:
-		balance = get_balance_on(d.name, date=filters.report_date)
+		# income and expense balances run from the start of the fiscal year
+		start_date = (
+			get_year_start_date(filters.report_date, d.company)
+			if d.report_type == "Profit and Loss"
+			else None
+		)
+		balance = get_balance_on(
+			d.name, date=filters.report_date, start_date=start_date, apply_gl_entry_permissions=True
+		)
 		row = {"account": d.name, "balance": balance, "currency": d.account_currency}
 
 		data.append(row)
 
 	return data
+
+
+def get_year_start_date(report_date: str, company: str):
+	fiscal_year = get_fiscal_year(report_date, company=company, verbose=0, raise_on_missing=False)
+	return fiscal_year[1] if fiscal_year else None

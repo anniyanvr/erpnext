@@ -1,47 +1,42 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
-import unittest
-
 import frappe
-from frappe import ValidationError
+from frappe.utils import today
 
-# test_records = frappe.get_test_records('Bank Account')
+from erpnext.accounts.doctype.bank_account.bank_account import set_closing_balance_as_per_statement
+from erpnext.tests.permission_test_utils import (
+	as_user,
+	assert_refused_for_names,
+	make_bank_account,
+	make_company_fenced_user,
+)
+from erpnext.tests.utils import ERPNextTestSuite
 
-class TestBankAccount(unittest.TestCase):
 
-	def test_validate_iban(self):
-		valid_ibans = [
-			'GB82 WEST 1234 5698 7654 32',
-			'DE91 1000 0000 0123 4567 89',
-			'FR76 3000 6000 0112 3456 7890 189'
-		]
+class TestBankAccount(ERPNextTestSuite):
+	def test_closing_balance_fences_the_bank_account(self):
+		bank_account = make_bank_account("UP Closing Balance", "_Test Company", "HDFC - _TC")
 
-		invalid_ibans = [
-			# wrong checksum (3rd place)
-			'GB72 WEST 1234 5698 7654 32',
-			'DE81 1000 0000 0123 4567 89',
-			'FR66 3000 6000 0112 3456 7890 189'
-		]
+		def closing_balance_kwargs(name):
+			return {"bank_account": name, "date": today(), "balance": 10}
 
-		bank_account = frappe.get_doc({'doctype':'Bank Account'})
-
-		try:
-			bank_account.validate_iban()
-		except AttributeError:
-			msg = 'BankAccount.validate_iban() failed for empty IBAN'
-			self.fail(msg=msg)
-
-		for iban in valid_ibans:
-			bank_account.iban = iban
-			try:
-				bank_account.validate_iban()
-			except ValidationError:
-				msg = 'BankAccount.validate_iban() failed for valid IBAN {}'.format(iban)
-				self.fail(msg=msg)
-
-		for not_iban in invalid_ibans:
-			bank_account.iban = not_iban
-			msg = 'BankAccount.validate_iban() accepted invalid IBAN {}'.format(not_iban)
-			with self.assertRaises(ValidationError, msg=msg):
-				bank_account.validate_iban()
+		outside = make_company_fenced_user("ba-fenced@example.com", ["Accounts User"], "_Test Company 1")
+		with as_user(outside):
+			assert_refused_for_names(
+				self,
+				set_closing_balance_as_per_statement,
+				closing_balance_kwargs,
+				[bank_account],
+				type_gated=True,
+				caller_supplied=True,
+			)
+		inside = make_company_fenced_user("ba-fenced@example.com", ["Accounts User"], "_Test Company")
+		with as_user(inside):
+			set_closing_balance_as_per_statement(bank_account, today(), 10)
+		self.assertEqual(
+			frappe.db.get_value(
+				"Bank Account Balance", {"bank_account": bank_account, "date": today()}, "balance"
+			),
+			10,
+		)

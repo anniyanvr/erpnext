@@ -9,131 +9,252 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, floor, flt, nowdate
+from frappe.permissions import get_allowed_docs_for_doctype, get_user_permissions
+from frappe.utils import cint, cstr, floor, flt, nowdate
 
+from erpnext import _refuse
 from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
-from erpnext.stock.utils import get_stock_balance
+from erpnext.stock.get_item_details import get_conversion_factor
+from erpnext.stock.utils import _get_stock_balance
 
 
 class PutawayRule(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		capacity: DF.Float
+		company: DF.Link
+		conversion_factor: DF.Float
+		disable: DF.Check
+		item_code: DF.Link
+		item_name: DF.Data | None
+		priority: DF.Int
+		stock_capacity: DF.Float
+		stock_uom: DF.Link | None
+		uom: DF.Link | None
+		warehouse: DF.Link
+	# end: auto-generated types
+
 	def validate(self):
 		self.validate_duplicate_rule()
 		self.validate_warehouse_and_company()
+		self.set_stock_capacity()
 		self.validate_capacity()
 		self.validate_priority()
-		self.set_stock_capacity()
 
 	def validate_duplicate_rule(self):
-		existing_rule = frappe.db.exists("Putaway Rule", {"item_code": self.item_code, "warehouse": self.warehouse})
+		existing_rule = frappe.db.exists(
+			"Putaway Rule", {"item_code": self.item_code, "warehouse": self.warehouse}
+		)
 		if existing_rule and existing_rule != self.name:
-			frappe.throw(_("Putaway Rule already exists for Item {0} in Warehouse {1}.")
-				.format(frappe.bold(self.item_code), frappe.bold(self.warehouse)),
-				title=_("Duplicate"))
+			frappe.throw(
+				_("Putaway Rule already exists for Item {0} in Warehouse {1}.").format(
+					frappe.bold(self.item_code), frappe.bold(self.warehouse)
+				),
+				title=_("Duplicate"),
+			)
 
 	def validate_priority(self):
 		if self.priority < 1:
-			frappe.throw(_("Priority cannot be lesser than 1."), title=_("Invalid Priority"))
+			frappe.throw(_("Priority cannot be less than 1."), title=_("Invalid Priority"))
 
 	def validate_warehouse_and_company(self):
-		company = frappe.db.get_value("Warehouse", self.warehouse, "company")
+		company, is_group, disabled = frappe.db.get_value(
+			"Warehouse", self.warehouse, ["company", "is_group", "disabled"]
+		)
+		if (is_group or disabled) and not self.disable:
+			frappe.throw(
+				_("Warehouse {0} must be an enabled warehouse that is not a group.").format(
+					frappe.bold(self.warehouse)
+				),
+				title=_("Invalid Warehouse"),
+			)
+
+		if not self.disable and not frappe.get_cached_value("Item", self.item_code, "is_stock_item"):
+			frappe.throw(_("Item {0} is not a stock item.").format(frappe.bold(self.item_code)))
+
 		if company != self.company:
-			frappe.throw(_("Warehouse {0} does not belong to Company {1}.")
-				.format(frappe.bold(self.warehouse), frappe.bold(self.company)),
-				title=_("Invalid Warehouse"))
+			frappe.throw(
+				_("Warehouse {0} does not belong to Company {1}.").format(
+					frappe.bold(self.warehouse), frappe.bold(self.company)
+				),
+				title=_("Invalid Warehouse"),
+			)
 
 	def validate_capacity(self):
 		stock_uom = frappe.db.get_value("Item", self.item_code, "stock_uom")
-		balance_qty = get_stock_balance(self.item_code, self.warehouse, nowdate())
+		balance_qty = _get_stock_balance(self.item_code, self.warehouse, nowdate())
 
 		if flt(self.stock_capacity) < flt(balance_qty):
-			frappe.throw(_("Warehouse Capacity for Item '{0}' must be greater than the existing stock level of {1} {2}.")
-				.format(self.item_code, frappe.bold(balance_qty), stock_uom),
-				title=_("Insufficient Capacity"))
+			frappe.throw(
+				_(
+					"Warehouse Capacity for Item '{0}' must be greater than the existing stock level of {1} {2}."
+				).format(self.item_code, frappe.bold(balance_qty), stock_uom),
+				title=_("Insufficient Capacity"),
+			)
 
 		if not self.capacity:
 			frappe.throw(_("Capacity must be greater than 0"), title=_("Invalid"))
 
 	def set_stock_capacity(self):
-		self.stock_capacity = (flt(self.conversion_factor) or 1) * flt(self.capacity)
+		self.stock_uom = frappe.get_cached_value("Item", self.item_code, "stock_uom")
+		self.uom = self.uom or self.stock_uom
+		self.conversion_factor = get_conversion_factor(self.item_code, self.uom).get("conversion_factor") or 1
+		self.stock_capacity = flt(self.conversion_factor) * flt(self.capacity)
+
 
 @frappe.whitelist()
-def get_available_putaway_capacity(rule):
-	stock_capacity, item_code, warehouse = frappe.db.get_value("Putaway Rule", rule,
-		["stock_capacity", "item_code", "warehouse"])
-	balance_qty = get_stock_balance(item_code, warehouse, nowdate())
+def get_available_putaway_capacity(rule: str):
+	frappe.has_permission("Putaway Rule", "read", doc=rule, throw=True)
+
+	return _get_available_putaway_capacity(rule)
+
+
+def _get_available_putaway_capacity(rule: str):
+	stock_capacity, item_code, warehouse = frappe.db.get_value(
+		"Putaway Rule", rule, ["stock_capacity", "item_code", "warehouse"]
+	)
+	balance_qty = _get_stock_balance(item_code, warehouse, nowdate())
 	free_space = flt(stock_capacity) - flt(balance_qty)
 	return free_space if free_space > 0 else 0
 
-@frappe.whitelist()
-def apply_putaway_rule(doctype, items, company, sync=None, purpose=None):
-	""" Applies Putaway Rule on line items.
 
-		items: List of Purchase Receipt/Stock Entry Items
-		company: Company in the Purchase Receipt/Stock Entry
-		doctype: Doctype to apply rule on
-		purpose: Purpose of Stock Entry
-		sync (optional): Sync with client side only for client side calls
+@frappe.whitelist()
+def apply_putaway_rule(
+	doctype: str, items: list | str, company: str, sync: str | bool | None = None, purpose: str | None = None
+):
+	if doctype not in ("Purchase Receipt", "Stock Entry"):
+		_refuse()
+	frappe.has_permission(doctype, "write", throw=True)
+	allowed_companies = get_allowed_docs_for_doctype(
+		get_user_permissions(frappe.session.user).get("Company", []), doctype
+	)
+	if allowed_companies and company not in allowed_companies:
+		_refuse()
+	if not frappe.has_permission("Item", "read"):
+		return
+
+	items = frappe.parse_json(items)
+	bundles = {item.get("serial_and_batch_bundle") for item in items if item.get("serial_and_batch_bundle")}
+	if bundles:  # the preview copies them for the caller
+		readable = frappe.get_list(
+			"Serial and Batch Bundle",
+			filters={"name": ("in", list(bundles))},
+			pluck="name",
+			limit_page_length=0,
+		)
+		if len(readable) < len(bundles):
+			_refuse()
+
+	return _apply_putaway_rule(doctype, items, company, sync, purpose)
+
+
+def get_row_conversion_factor(item):
+	if item.uom and item.item_code:
+		return flt(get_conversion_factor(item.item_code, item.uom).get("conversion_factor")) or 1.0
+
+	return 1.0
+
+
+def _apply_putaway_rule(
+	doctype: str, items: list | str, company: str, sync: str | bool | None = None, purpose: str | None = None
+):
+	"""Applies Putaway Rule on line items.
+
+	items: List of Purchase Receipt/Stock Entry Items
+	company: Company in the Purchase Receipt/Stock Entry
+	doctype: Doctype to apply rule on
+	purpose: Purpose of Stock Entry
+	sync (optional): Sync with client side only for client side calls
 	"""
-	if isinstance(items, str):
-		items = json.loads(items)
+	items = frappe.parse_json(items)
+	sync = bool(sync and frappe.parse_json(sync))
 
 	items_not_accomodated, updated_table = [], []
-	item_wise_rules = defaultdict(list)
+	item_wise_rules = {}
 
 	for item in items:
 		if isinstance(item, dict):
 			item = frappe._dict(item)
 
 		source_warehouse = item.get("s_warehouse")
-		serial_nos = get_serial_nos(item.get("serial_no"))
-		item.conversion_factor = flt(item.conversion_factor) or 1.0
+		serial_nos = []
+		if item.get("serial_no"):
+			serial_nos = get_serial_nos(item.get("serial_no"))
+
+		item.conversion_factor = flt(item.conversion_factor) or get_row_conversion_factor(item)
 		pending_qty, item_code = flt(item.qty), item.item_code
-		pending_stock_qty = flt(item.transfer_qty) if doctype == "Stock Entry" else flt(item.stock_qty)
-		uom_must_be_whole_number = frappe.db.get_value('UOM', item.uom, 'must_be_whole_number')
+		pending_stock_qty = pending_qty * item.conversion_factor
+		uom_must_be_whole_number = frappe.get_cached_value("UOM", item.uom, "must_be_whole_number")
 
 		if not pending_qty or not item_code:
-			updated_table = add_row(item, pending_qty, source_warehouse or item.warehouse, updated_table)
+			updated_table = add_row(
+				item,
+				pending_qty,
+				source_warehouse or item.warehouse,
+				updated_table,
+				serial_nos=serial_nos,
+				keep_rejected=True,
+			)
 			continue
 
-		at_capacity, rules = get_ordered_putaway_rules(item_code, company, source_warehouse=source_warehouse)
+		if item_code not in item_wise_rules:
+			item_wise_rules[item_code] = get_item_putaway_rules(item_code, company)
+		at_capacity, rules = select_vacant_rules(item_wise_rules[item_code], source_warehouse)
 
 		if not rules:
-			warehouse = source_warehouse or item.get('warehouse')
+			warehouse = (
+				(source_warehouse or item.get("warehouse"))
+				if not item.get("t_warehouse")
+				else item.get("t_warehouse")
+			)
+
 			if at_capacity:
 				# rules available, but no free space
 				items_not_accomodated.append([item_code, pending_qty])
 			else:
-				updated_table = add_row(item, pending_qty, warehouse, updated_table)
+				updated_table = add_row(
+					item, pending_qty, warehouse, updated_table, serial_nos=serial_nos, keep_rejected=True
+				)
 			continue
 
-		# maintain item/item-warehouse wise rules, to handle if item is entered twice
-		# in the table, due to different price, etc.
-		key = item_code
-		if doctype == "Stock Entry" and purpose == "Material Transfer" and source_warehouse:
-			key = (item_code, source_warehouse)
-
-		if not item_wise_rules[key]:
-			item_wise_rules[key] = rules
-
-		for rule in item_wise_rules[key]:
+		keep_rejected = True
+		for rule in rules:
 			if pending_stock_qty > 0 and rule.free_space:
-				stock_qty_to_allocate = flt(rule.free_space) if pending_stock_qty >= flt(rule.free_space) else pending_stock_qty
+				stock_qty_to_allocate = (
+					flt(rule.free_space) if pending_stock_qty >= flt(rule.free_space) else pending_stock_qty
+				)
 				qty_to_allocate = stock_qty_to_allocate / item.conversion_factor
 
 				if uom_must_be_whole_number:
 					qty_to_allocate = floor(qty_to_allocate)
 					stock_qty_to_allocate = qty_to_allocate * item.conversion_factor
 
-				if not qty_to_allocate: break
+				if not qty_to_allocate:
+					continue
 
-				updated_table = add_row(item, qty_to_allocate, rule.warehouse, updated_table,
-					rule.name, serial_nos=serial_nos)
+				updated_table = add_row(
+					item,
+					qty_to_allocate,
+					rule.warehouse,
+					updated_table,
+					rule.name,
+					serial_nos=serial_nos,
+					keep_rejected=keep_rejected,
+				)
+				keep_rejected = False
 
 				pending_stock_qty -= stock_qty_to_allocate
 				pending_qty -= qty_to_allocate
 				rule["free_space"] -= stock_qty_to_allocate
 
-				if not pending_stock_qty > 0: break
+				if pending_stock_qty <= 0:
+					break
 
 		# if pending qty after applying all rules, add row without warehouse
 		if pending_stock_qty > 0:
@@ -142,47 +263,87 @@ def apply_putaway_rule(doctype, items, company, sync=None, purpose=None):
 	if items_not_accomodated:
 		show_unassigned_items_message(items_not_accomodated)
 
-	items[:] = updated_table if updated_table else items # modify items table
+	if updated_table and _items_changed(items, updated_table, doctype):
+		_split_bundles(updated_table, doctype, keep_original=not sync)
+		frappe.msgprint(_("Applied putaway rules."), alert=True)
+		return updated_table
 
-	if sync and json.loads(sync): # sync with client side
+	if sync:  # sync with client side
 		return items
+
+
+def _items_changed(old, new, doctype: str) -> bool:
+	"""Check if any items changed by application of putaway rules.
+
+	If not, changing item table can have side effects since `name` items also changes.
+	"""
+	if len(old) != len(new):
+		return True
+
+	old = [frappe._dict(item) if isinstance(item, dict) else item for item in old]
+
+	if doctype == "Stock Entry":
+		compare_keys = ("item_code", "t_warehouse", "transfer_qty", "serial_no")
+		sort_key = lambda item: (  # noqa
+			item.item_code,
+			cstr(item.t_warehouse),
+			flt(item.transfer_qty),
+			cstr(item.serial_no),
+		)
+	else:
+		# purchase receipt / invoice
+		compare_keys = ("item_code", "warehouse", "stock_qty", "received_qty", "serial_no")
+		sort_key = lambda item: (  # noqa
+			item.item_code,
+			cstr(item.warehouse),
+			flt(item.stock_qty),
+			flt(item.received_qty),
+			cstr(item.serial_no),
+		)
+
+	old_sorted = sorted(old, key=sort_key)
+	new_sorted = sorted(new, key=sort_key)
+
+	# Once sorted by all relevant keys both tables should align if they are same.
+	for old_item, new_item in zip(old_sorted, new_sorted, strict=False):
+		for key in compare_keys:
+			if old_item.get(key) != new_item.get(key):
+				return True
+	return False
+
 
 def get_ordered_putaway_rules(item_code, company, source_warehouse=None):
 	"""Returns an ordered list of putaway rules to apply on an item."""
-	filters = {
-		"item_code": item_code,
-		"company": company,
-		"disable": 0
-	}
-	if source_warehouse:
-		filters.update({"warehouse": ["!=", source_warehouse]})
+	return select_vacant_rules(get_item_putaway_rules(item_code, company), source_warehouse)
 
-	rules = frappe.get_all("Putaway Rule",
+
+def get_item_putaway_rules(item_code, company):
+	rules = frappe.get_all(
+		"Putaway Rule",
 		fields=["name", "item_code", "stock_capacity", "priority", "warehouse"],
-		filters=filters,
-		order_by="priority asc, capacity desc")
+		filters={"item_code": item_code, "company": company, "disable": 0},
+		order_by="priority asc, capacity desc",
+	)
+	for rule in rules:
+		balance_qty = _get_stock_balance(rule.item_code, rule.warehouse, nowdate())
+		rule["free_space"] = max(flt(rule.stock_capacity) - flt(balance_qty), 0)
 
+	return rules
+
+
+def select_vacant_rules(rules, source_warehouse=None):
+	rules = [rule for rule in rules if rule.warehouse != source_warehouse]
 	if not rules:
 		return False, None
 
-	vacant_rules = []
-	for rule in rules:
-		balance_qty = get_stock_balance(rule.item_code, rule.warehouse, nowdate())
-		free_space = flt(rule.stock_capacity) - flt(balance_qty)
-		if free_space > 0:
-			rule["free_space"] = free_space
-			vacant_rules.append(rule)
-
+	vacant_rules = [rule for rule in rules if rule.free_space > 0]
 	if not vacant_rules:
-		# After iterating through rules, if no rules are left
-		# then there is not enough space left in any rule
 		return True, None
 
-	vacant_rules = sorted(vacant_rules, key = lambda i: (i['priority'], -i['free_space']))
+	return False, sorted(vacant_rules, key=lambda rule: (rule.priority, -rule.free_space))
 
-	return False, vacant_rules
 
-def add_row(item, to_allocate, warehouse, updated_table, rule=None, serial_nos=None):
+def add_row(item, to_allocate, warehouse, updated_table, rule=None, serial_nos=None, keep_rejected=False):
 	new_updated_table_row = copy.deepcopy(item)
 	new_updated_table_row.idx = 1 if not updated_table else cint(updated_table[-1].idx) + 1
 	new_updated_table_row.name = None
@@ -194,43 +355,196 @@ def add_row(item, to_allocate, warehouse, updated_table, rule=None, serial_nos=N
 	else:
 		new_updated_table_row.stock_qty = flt(to_allocate) * flt(new_updated_table_row.conversion_factor)
 		new_updated_table_row.warehouse = warehouse
-		new_updated_table_row.rejected_qty = 0
-		new_updated_table_row.received_qty = to_allocate
+		if not keep_rejected:
+			new_updated_table_row.rejected_qty = 0
+
+		new_updated_table_row.received_qty = flt(to_allocate) + flt(new_updated_table_row.rejected_qty)
 
 	if rule:
 		new_updated_table_row.putaway_rule = rule
+
 	if serial_nos:
-		new_updated_table_row.serial_no = get_serial_nos_to_allocate(serial_nos, to_allocate)
+		new_updated_table_row.serial_no = get_serial_nos_to_allocate(
+			serial_nos, flt(to_allocate) * flt(new_updated_table_row.conversion_factor or 1)
+		)
+
+	# legacy serial / batch fields rebuild the bundle on save; a picked bundle is split later
+	if item.get("use_serial_batch_fields") or item.get("serial_no") or item.get("batch_no"):
+		new_updated_table_row.serial_and_batch_bundle = ""
+
+	if not keep_rejected:
+		new_updated_table_row.rejected_serial_and_batch_bundle = ""
 
 	updated_table.append(new_updated_table_row)
 	return updated_table
 
+
+def _split_bundles(rows, doctype: str, keep_original: bool = True):
+	"""Give every row made from one source row its share of the picked bundle; the preview copies them all."""
+	qty_field = "transfer_qty" if doctype == "Stock Entry" else "stock_qty"
+	warehouse_field = "t_warehouse" if doctype == "Stock Entry" else "warehouse"
+
+	rows_by_bundle = defaultdict(list)
+	for row in rows:
+		if row.get("serial_and_batch_bundle"):
+			rows_by_bundle[row.get("serial_and_batch_bundle")].append(row)
+
+	precision = frappe.get_precision("Serial and Batch Bundle", "total_qty")
+	for bundle in frappe.get_docs("Serial and Batch Bundle", filters={"name": ("in", list(rows_by_bundle))}):
+		bundle_rows = rows_by_bundle[bundle.name]
+		qtys = [abs(flt(row.get(qty_field))) for row in bundle_rows]
+
+		if (
+			len(bundle_rows) == 1
+			and not flt(qtys[0] - abs(flt(bundle.total_qty)), precision)
+			and (
+				bundle.type_of_transaction == "Outward"
+				or bundle.warehouse == bundle_rows[0].get(warehouse_field)
+			)
+		):
+			continue
+
+		slices = _slice_entries(bundle.entries, qtys, precision)
+		for idx, (row, share) in enumerate(zip(bundle_rows, slices, strict=True)):
+			if not share:
+				row.serial_and_batch_bundle = ""
+				continue
+
+			doc = bundle if idx == 0 and keep_original else frappe.copy_doc(bundle, ignore_no_copy=False)
+			doc.set("entries", [])
+			for entry in share:
+				doc.append("entries", entry)
+
+			if doc.type_of_transaction == "Inward":
+				doc.warehouse = row.get(warehouse_field)
+
+			doc.save()
+			row.serial_and_batch_bundle = doc.name
+
+
+def _slice_entries(entries, qtys, precision):
+	"""Cut bundle entries into one slice per qty, in bundle order; a batch entry may straddle two slices."""
+	slices = []
+	idx, left = 0, 0.0
+
+	for qty in qtys:
+		share, need = [], flt(qty, precision)
+		while need > 0 and idx < len(entries):
+			entry = entries[idx]
+			if not left:
+				left = abs(flt(entry.qty))
+
+			take = min(left, need)
+			row = entry.as_dict(no_default_fields=True)
+			row["qty"] = take
+			share.append(row)
+
+			left = flt(left - take, precision)
+			need = flt(need - take, precision)
+			if not left:
+				idx += 1
+
+		slices.append(share)
+
+	return slices
+
+
 def show_unassigned_items_message(items_not_accomodated):
-	msg = _("The following Items, having Putaway Rules, could not be accomodated:") + "<br><br>"
+	msg = _("The following Items, having Putaway Rules, could not be accommodated:") + "<br><br>"
 	formatted_item_rows = ""
 
 	for entry in items_not_accomodated:
 		item_link = frappe.utils.get_link_to_form("Item", entry[0])
-		formatted_item_rows += """
-			<td>{0}</td>
-			<td>{1}</td>
-		</tr>""".format(item_link, frappe.bold(entry[1]))
+		formatted_item_rows += f"""
+			<td>{item_link}</td>
+			<td>{frappe.bold(entry[1])}</td>
+		</tr>"""
 
 	msg += """
 		<table class="table">
 			<thead>
-				<td>{0}</td>
-				<td>{1}</td>
+				<td>{}</td>
+				<td>{}</td>
 			</thead>
-			{2}
+			{}
 		</table>
 	""".format(_("Item"), _("Unassigned Qty"), formatted_item_rows)
 
 	frappe.msgprint(msg, title=_("Insufficient Capacity"), is_minimizable=True, wide=True)
 
+
 def get_serial_nos_to_allocate(serial_nos, to_allocate):
 	if serial_nos:
-		allocated_serial_nos = serial_nos[0: cint(to_allocate)]
-		serial_nos[:] = serial_nos[cint(to_allocate):] # pop out allocated serial nos and modify list
+		allocated_serial_nos = serial_nos[0 : cint(to_allocate)]
+		serial_nos[:] = serial_nos[cint(to_allocate) :]  # pop out allocated serial nos and modify list
 		return "\n".join(allocated_serial_nos) if allocated_serial_nos else ""
-	else: return ""
+	else:
+		return ""
+
+
+def validate_putaway_capacity(doc):
+	# if over receipt is attempted while 'apply putaway rule' is disabled
+	# and if rule was applied on the transaction, validate it.
+	valid_doctype = doc.doctype in (
+		"Purchase Receipt",
+		"Stock Entry",
+		"Purchase Invoice",
+		"Stock Reconciliation",
+	)
+
+	if not frappe.get_all("Putaway Rule", limit=1):
+		return
+
+	if doc.doctype == "Purchase Invoice" and doc.get("update_stock") == 0:
+		valid_doctype = False
+
+	if valid_doctype:
+		rule_map = defaultdict(dict)
+		for item in doc.get("items"):
+			warehouse_field = "t_warehouse" if doc.doctype == "Stock Entry" else "warehouse"
+			rule = frappe.db.get_value(
+				"Putaway Rule",
+				{"item_code": item.get("item_code"), "warehouse": item.get(warehouse_field)},
+				["stock_capacity", "name", "disable"],
+				as_dict=True,
+			)
+			if rule:
+				if rule.get("disable"):
+					continue  # dont validate for disabled rule
+
+				if doc.doctype == "Stock Reconciliation":
+					stock_qty = flt(item.qty)
+				else:
+					stock_qty = (
+						flt(item.transfer_qty) if doc.doctype == "Stock Entry" else flt(item.stock_qty)
+					)
+
+				rule_name = rule.get("name")
+				if not rule_map[rule_name]:
+					rule_map[rule_name]["warehouse"] = item.get(warehouse_field)
+					rule_map[rule_name]["item"] = item.get("item_code")
+					rule_map[rule_name]["qty_put"] = 0
+					rule_map[rule_name]["capacity"] = (
+						rule.stock_capacity
+						if doc.doctype == "Stock Reconciliation"
+						else _get_available_putaway_capacity(rule_name)
+					)
+				rule_map[rule_name]["qty_put"] += flt(stock_qty)
+
+		for rule, values in rule_map.items():
+			if flt(values["qty_put"]) > flt(values["capacity"]):
+				message = _prepare_over_receipt_message(rule, values)
+				frappe.throw(msg=message, title=_("Over Receipt"))
+
+
+def _prepare_over_receipt_message(rule, values):
+	message = _("{0} qty of Item {1} is being received into Warehouse {2} with capacity {3}.").format(
+		frappe.bold(values["qty_put"]),
+		frappe.bold(values["item"]),
+		frappe.bold(values["warehouse"]),
+		frappe.bold(values["capacity"]),
+	)
+	message += "<br><br>"
+	rule_link = frappe.utils.get_link_to_form("Putaway Rule", rule)
+	message += _("Please adjust the qty or edit {0} to proceed.").format(rule_link)
+	return message

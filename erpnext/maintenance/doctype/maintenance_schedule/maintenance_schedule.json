@@ -2,8 +2,10 @@
  "actions": [],
  "autoname": "naming_series:",
  "creation": "2013-01-10 16:34:30",
+ "description": "Planned visits to service what a customer bought.",
  "doctype": "DocType",
  "document_type": "Document",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/maintenance-schedule",
  "engine": "InnoDB",
  "field_order": [
   "customer_details",
@@ -152,6 +154,7 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "Mobile No",
+   "options": "Phone",
    "read_only": 1
   },
   {
@@ -160,6 +163,7 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "Contact Email",
+   "options": "Email",
    "print_hide": 1,
    "read_only": 1
   },
@@ -185,7 +189,7 @@
   },
   {
    "fieldname": "address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "hidden": 1,
    "label": "Address",
    "read_only": 1
@@ -226,7 +230,7 @@
    "read_only": 1
   }
  ],
- "icon": "fa fa-calendar",
+ "icon": "calendar-check",
  "idx": 1,
  "is_submittable": 1,
  "links": [
@@ -236,10 +240,11 @@
    "link_fieldname": "maintenance_schedule"
   }
  ],
- "modified": "2021-05-27 16:05:10.746465",
+ "modified": "2026-10-05 17:12:54.560318",
  "modified_by": "Administrator",
  "module": "Maintenance",
  "name": "Maintenance Schedule",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -255,10 +260,15 @@
    "share": 1,
    "submit": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Maintenance User"
   }
  ],
  "search_fields": "status,customer,customer_name",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "timeline_field": "customer"
 }

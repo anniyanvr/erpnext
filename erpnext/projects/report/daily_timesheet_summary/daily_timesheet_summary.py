@@ -4,46 +4,69 @@
 
 import frappe
 from frappe import _
-from frappe.desk.reportview import build_match_conditions
+from frappe.utils import add_days, getdate
+
+from erpnext.accounts.report.utils import validate_date_range
+from erpnext.stock.utils import get_combine_datetime
 
 
 def execute(filters=None):
-	if not filters:
-		filters = {}
-	elif filters.get("from_date") or filters.get("to_date"):
-		filters["from_time"] = "00:00:00"
-		filters["to_time"] = "24:00:00"
+	validate_date_range(filters)
+
+	filters = filters or {}
 
 	columns = get_column()
-	conditions = get_conditions(filters)
-	data = get_data(conditions, filters)
+	data = get_data(filters)
 
 	return columns, data
 
+
 def get_column():
-	return [_("Timesheet") + ":Link/Timesheet:120", _("Employee") + "::150", _("Employee Name") + "::150",
-		_("From Datetime") + "::140", _("To Datetime") + "::140", _("Hours") + "::70",
-		_("Activity Type") + "::120", _("Task") + ":Link/Task:150",
-		_("Project") + ":Link/Project:120", _("Status") + "::70"]
+	return [
+		_("Timesheet") + ":Link/Timesheet:120",
+		_("Employee") + "::150",
+		_("Employee Name") + "::150",
+		_("From Datetime") + "::140",
+		_("To Datetime") + "::140",
+		_("Hours") + "::70",
+		_("Activity Type") + "::120",
+		_("Task") + ":Link/Task:150",
+		_("Project") + ":Link/Project:120",
+		_("Status") + "::70",
+	]
 
-def get_data(conditions, filters):
-	time_sheet = frappe.db.sql(""" select `tabTimesheet`.name, `tabTimesheet`.employee, `tabTimesheet`.employee_name,
-		`tabTimesheet Detail`.from_time, `tabTimesheet Detail`.to_time, `tabTimesheet Detail`.hours,
-		`tabTimesheet Detail`.activity_type, `tabTimesheet Detail`.task, `tabTimesheet Detail`.project,
-		`tabTimesheet`.status from `tabTimesheet Detail`, `tabTimesheet` where
-		`tabTimesheet Detail`.parent = `tabTimesheet`.name and %s order by `tabTimesheet`.name"""%(conditions), filters, as_list=1)
 
-	return time_sheet
+def get_data(filters):
+	ts = frappe.qb.DocType("Timesheet")
+	tsd = frappe.qb.DocType("Timesheet Detail")
 
-def get_conditions(filters):
-	conditions = "`tabTimesheet`.docstatus = 1"
+	# Base the query on Timesheet so get_query applies its user-permission match conditions
+	# (the qb form of build_match_conditions); Timesheet Detail rows are inner-joined on.
+	query = (
+		frappe.qb.get_query(
+			"Timesheet",
+			fields=["name", "employee", "employee_name"],
+			ignore_permissions=False,
+		)
+		.inner_join(tsd)
+		.on(tsd.parent == ts.name)
+		.select(
+			tsd.from_time,
+			tsd.to_time,
+			tsd.hours,
+			tsd.activity_type,
+			tsd.task,
+			tsd.project,
+			ts.status,
+		)
+		.where(ts.docstatus == 1)
+	)
+
 	if filters.get("from_date"):
-		conditions += " and `tabTimesheet Detail`.from_time >= timestamp(%(from_date)s, %(from_time)s)"
+		query = query.where(tsd.from_time >= get_combine_datetime(filters.get("from_date"), "00:00:00"))
+
 	if filters.get("to_date"):
-		conditions += " and `tabTimesheet Detail`.to_time <= timestamp(%(to_date)s, %(to_time)s)"
+		end_of_to_date = get_combine_datetime(add_days(getdate(filters.get("to_date")), 1), "00:00:00")
+		query = query.where(tsd.from_time < end_of_to_date)
 
-	match_conditions = build_match_conditions("Timesheet")
-	if match_conditions:
-		conditions += " and %s" % match_conditions
-
-	return conditions
+	return query.orderby(ts.name).run(as_list=True)

@@ -1,0 +1,654 @@
+import frappe
+from frappe.utils import add_days, today
+
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+	BLANK_ACCOUNTING_DIMENSION,
+)
+from erpnext.accounts.doctype.cost_center.test_cost_center import create_cost_center
+from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
+from erpnext.accounts.report.customer_ledger_summary.customer_ledger_summary import execute
+from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
+from erpnext.controllers.sales_and_purchase_return import make_return_doc
+from erpnext.selling.doctype.customer.test_customer import make_customer
+from erpnext.tests.utils import ERPNextTestSuite
+
+
+class TestCustomerLedgerSummary(ERPNextTestSuite, AccountsTestMixin):
+	def test_blank_and_multiple_payment_terms_filters(self):
+		invoice = self.create_sales_invoice()
+		filters = frappe._dict(
+			company=invoice.company,
+			party=self.customer,
+			from_date=invoice.posting_date,
+			to_date=invoice.posting_date,
+		)
+		for party_terms in (None, "", "_Test Payment Term Template", "_Test Other Payment Terms"):
+			frappe.db.set_value("Customer", self.customer, "payment_terms", party_terms)
+			for selected, matching_terms in (
+				([], (None, "", "_Test Payment Term Template", "_Test Other Payment Terms")),
+				([BLANK_ACCOUNTING_DIMENSION], (None, "")),
+				(["_Test Payment Term Template"], ("_Test Payment Term Template",)),
+				(
+					["_Test Payment Term Template", "_Test Other Payment Terms"],
+					("_Test Payment Term Template", "_Test Other Payment Terms"),
+				),
+				(
+					[BLANK_ACCOUNTING_DIMENSION, "_Test Payment Term Template"],
+					(None, "", "_Test Payment Term Template"),
+				),
+				("_Test Payment Term Template", ("_Test Payment Term Template",)),
+				(
+					frappe.as_json([BLANK_ACCOUNTING_DIMENSION, "_Test Payment Term Template"]),
+					(None, "", "_Test Payment Term Template"),
+				),
+			):
+				with self.subTest(party_terms=party_terms, selected=selected):
+					filters.payment_terms_template = selected
+					rows = execute(filters)[1]
+					self.assertEqual(bool(rows), party_terms in matching_terms)
+
+	def setUp(self):
+		self.company = "_Test Company"
+		self.customer = "_Test Customer"
+		self.item = "_Test Item"
+		self.debit_to = "Debtors - _TC"
+		self.cost_center = "Main - _TC"
+		self.cash = "Cash - _TC"
+
+	def create_sales_invoice(self, do_not_submit=False, **args):
+		si = create_sales_invoice(
+			item=self.item,
+			company=self.company,
+			customer=self.customer,
+			debit_to=self.debit_to,
+			posting_date=today(),
+			parent_cost_center=self.cost_center,
+			cost_center=self.cost_center,
+			rate=100,
+			qty=10,
+			price_list_rate=100,
+			do_not_save=1,
+			**args,
+		)
+		si = si.save()
+		if not do_not_submit:
+			si = si.submit()
+		return si
+
+	def create_payment_entry(self, docname, do_not_submit=False):
+		pe = get_payment_entry("Sales Invoice", docname, bank_account=self.cash, party_amount=40)
+		pe.paid_from = self.debit_to
+		pe.insert()
+		if not do_not_submit:
+			pe.submit()
+		return pe
+
+	def create_credit_note(self, docname, do_not_submit=False):
+		credit_note = create_sales_invoice(
+			company=self.company,
+			customer=self.customer,
+			item=self.item,
+			qty=-1,
+			debit_to=self.debit_to,
+			cost_center=self.cost_center,
+			is_return=1,
+			return_against=docname,
+			do_not_submit=do_not_submit,
+		)
+
+		return credit_note
+
+	def test_blank_customer_group_filter(self):
+		invoice = self.create_sales_invoice()
+		group = frappe.db.get_value("Customer", self.customer, "customer_group")
+		parent_group = frappe.db.get_value("Customer Group", group, "parent_customer_group")
+		filters = frappe._dict(
+			company=self.company,
+			party=self.customer,
+			from_date=invoice.posting_date,
+			to_date=invoice.posting_date,
+		)
+		for party_group in (None, "", group):
+			frappe.db.set_value("Customer", self.customer, "customer_group", party_group)
+			for groups, expected in (
+				([BLANK_ACCOUNTING_DIMENSION], int(not party_group)),
+				([parent_group], int(bool(party_group))),
+				([BLANK_ACCOUNTING_DIMENSION, parent_group], 1),
+			):
+				with self.subTest(party_group=party_group, groups=groups):
+					filters.customer_group = groups
+					rows = execute(filters)[1]
+					self.assertEqual(len(rows), expected)
+					if rows:
+						self.assertEqual(rows[0].invoiced_amount, invoice.grand_total)
+
+	def test_blank_cost_center_filter(self):
+		blank_invoice = self.create_sales_invoice()
+		self.create_sales_invoice()
+		cost_center = blank_invoice.items[0].cost_center
+		parent_cost_center = frappe.db.get_value("Cost Center", cost_center, "parent_cost_center")
+		filters = frappe._dict(
+			company=self.company,
+			party=self.customer,
+			from_date=blank_invoice.posting_date,
+			to_date=blank_invoice.posting_date,
+		)
+
+		for blank_value in (None, ""):
+			frappe.db.set_value("GL Entry", {"voucher_no": blank_invoice.name}, "cost_center", blank_value)
+			for cost_centers, expected in (
+				([BLANK_ACCOUNTING_DIMENSION], 1000),
+				([cost_center], 1000),
+				([BLANK_ACCOUNTING_DIMENSION, parent_cost_center], 2000),
+			):
+				with self.subTest(blank_value=blank_value, cost_centers=cost_centers):
+					filters.cost_center = cost_centers
+					rows = execute(filters)[1]
+					self.assertEqual(len(rows), 1)
+					self.assertEqual(rows[0].invoiced_amount, expected)
+
+	def test_blank_territory_filter(self):
+		self.create_sales_invoice()
+		territory = frappe.db.get_value("Customer", self.customer, "territory")
+		parent_territory = frappe.db.get_value("Territory", territory, "parent_territory")
+		filters = frappe._dict(
+			company=self.company,
+			party=self.customer,
+			from_date=today(),
+			to_date=today(),
+		)
+
+		for customer_territory in (None, "", territory):
+			frappe.db.set_value("Customer", self.customer, "territory", customer_territory)
+			for territories, expected in (
+				([BLANK_ACCOUNTING_DIMENSION], int(not customer_territory)),
+				([parent_territory], int(bool(customer_territory))),
+				([BLANK_ACCOUNTING_DIMENSION, parent_territory], 1),
+			):
+				with self.subTest(customer_territory=customer_territory, territories=territories):
+					filters.territory = territories
+					rows = execute(filters)[1]
+					self.assertEqual(len(rows), expected)
+					if rows:
+						self.assertEqual(rows[0].invoiced_amount, 1000)
+
+	def test_blank_sales_partner_filter(self):
+		self.create_sales_invoice()
+		partner = "_Test Sales Partner India - 1"
+		filters = frappe._dict(
+			company=self.company,
+			party=self.customer,
+			from_date=today(),
+			to_date=today(),
+		)
+
+		for customer_partner in (None, "", partner):
+			frappe.db.set_value("Customer", self.customer, "default_sales_partner", customer_partner)
+			for partners, expected in (
+				([BLANK_ACCOUNTING_DIMENSION], int(not customer_partner)),
+				([partner], int(bool(customer_partner))),
+				([BLANK_ACCOUNTING_DIMENSION, partner], 1),
+			):
+				with self.subTest(customer_partner=customer_partner, partners=partners):
+					filters.sales_partner = partners
+					rows = execute(filters)[1]
+					self.assertEqual(len(rows), expected)
+					if rows:
+						self.assertEqual(rows[0].invoiced_amount, 1000)
+
+	def test_blank_sales_person_filter(self):
+		self.customer = make_customer("_Test Customer Blank Sales Person")
+		invoice = self.create_sales_invoice()
+		filters = frappe._dict(company=self.company, party=self.customer, from_date=today(), to_date=today())
+		person = "_Test Sales Person"
+		parent_person = frappe.db.get_value("Sales Person", person, "parent_sales_person")
+		for customer_person, invoice_person in (
+			(None, None),
+			("", ""),
+			(person, None),
+			(None, person),
+			(person, person),
+		):
+			for parenttype, parent, value in (
+				("Customer", self.customer, customer_person),
+				("Sales Invoice", invoice.name, invoice_person),
+			):
+				frappe.db.delete("Sales Team", {"parenttype": parenttype, "parent": parent})
+				if value is not None:
+					frappe.get_doc(
+						{
+							"doctype": "Sales Team",
+							"parenttype": parenttype,
+							"parent": parent,
+							"parentfield": "sales_team",
+							"sales_person": value,
+							"allocated_percentage": 100,
+						}
+					).db_insert()
+			for selected, expected in (
+				([BLANK_ACCOUNTING_DIMENSION], not customer_person or not invoice_person),
+				([parent_person], bool(customer_person or invoice_person)),
+				([BLANK_ACCOUNTING_DIMENSION, parent_person], True),
+			):
+				with self.subTest(
+					customer_person=customer_person, invoice_person=invoice_person, selected=selected
+				):
+					filters.sales_person = selected
+					rows = execute(filters)[1]
+					self.assertEqual({row.party for row in rows}, {self.customer} if expected else set())
+					self.assertEqual(
+						sum(row.invoiced_amount for row in rows), invoice.grand_total if expected else 0
+					)
+
+	def test_ledger_summary_basic_output(self):
+		filters = {"company": self.company, "from_date": today(), "to_date": today()}
+
+		si = self.create_sales_invoice(do_not_submit=True)
+		si.save().submit()
+
+		expected = {
+			"party": "_Test Customer",
+			"party_name": "_Test Customer",
+			"opening_balance": 0,
+			"invoiced_amount": 1000.0,
+			"paid_amount": 0,
+			"return_amount": 0,
+			"closing_balance": 1000.0,
+			"currency": "INR",
+			"customer_name": "_Test Customer",
+		}
+
+		report = execute(filters)[1]
+		self.assertEqual(len(report), 1)
+		for field in expected:
+			with self.subTest(field=field):
+				self.assertEqual(report[0].get(field), expected.get(field))
+
+	def test_summary_with_return_and_payment(self):
+		filters = {"company": self.company, "from_date": today(), "to_date": today()}
+
+		si = self.create_sales_invoice(do_not_submit=True)
+		si.save().submit()
+
+		expected = {
+			"party": "_Test Customer",
+			"party_name": "_Test Customer",
+			"opening_balance": 0,
+			"invoiced_amount": 1000.0,
+			"paid_amount": 0,
+			"return_amount": 0,
+			"closing_balance": 1000.0,
+			"currency": "INR",
+			"customer_name": "_Test Customer",
+		}
+
+		report = execute(filters)[1]
+		self.assertEqual(len(report), 1)
+		for field in expected:
+			with self.subTest(field=field):
+				self.assertEqual(report[0].get(field), expected.get(field))
+
+		cr_note = self.create_credit_note(si.name, True)
+		cr_note.items[0].qty = -2
+		cr_note.save().submit()
+
+		expected_after_cr_note = {
+			"party": "_Test Customer",
+			"party_name": "_Test Customer",
+			"opening_balance": 0,
+			"invoiced_amount": 1000.0,
+			"paid_amount": 0,
+			"return_amount": 200.0,
+			"closing_balance": 800.0,
+			"currency": "INR",
+		}
+		report = execute(filters)[1]
+		self.assertEqual(len(report), 1)
+		for field in expected_after_cr_note:
+			with self.subTest(field=field):
+				self.assertEqual(report[0].get(field), expected_after_cr_note.get(field))
+
+		pe = self.create_payment_entry(si.name, True)
+		pe.paid_amount = 500
+		pe.save().submit()
+
+		expected_after_cr_and_payment = {
+			"party": "_Test Customer",
+			"party_name": "_Test Customer",
+			"opening_balance": 0,
+			"invoiced_amount": 1000.0,
+			"paid_amount": 500.0,
+			"return_amount": 200.0,
+			"closing_balance": 300.0,
+			"currency": "INR",
+		}
+
+		report = execute(filters)[1]
+		self.assertEqual(len(report), 1)
+		for field in expected_after_cr_and_payment:
+			with self.subTest(field=field):
+				self.assertEqual(report[0].get(field), expected_after_cr_and_payment.get(field))
+
+	def test_customer_ledger_ignore_cr_dr_filter(self):
+		si = create_sales_invoice()
+
+		cr_note = make_return_doc(si.doctype, si.name)
+		cr_note.submit()
+
+		pr = frappe.get_doc("Payment Reconciliation")
+		pr.company = si.company
+		pr.party_type = "Customer"
+		pr.party = si.customer
+		pr.receivable_payable_account = si.debit_to
+
+		pr.get_unreconciled_entries()
+
+		invoices = [invoice.as_dict() for invoice in pr.invoices if invoice.invoice_number == si.name]
+		payments = [payment.as_dict() for payment in pr.payments if payment.reference_name == cr_note.name]
+		pr.allocate_entries(frappe._dict({"invoices": invoices, "payments": payments}))
+		pr.reconcile()
+
+		system_generated_journal = frappe.db.get_all(
+			"Journal Entry",
+			filters={
+				"docstatus": 1,
+				"reference_type": si.doctype,
+				"reference_name": si.name,
+				"voucher_type": "Credit Note",
+				"is_system_generated": True,
+			},
+			fields=["name"],
+		)
+		self.assertEqual(len(system_generated_journal), 1)
+		expected = {
+			"party": "_Test Customer",
+			"customer_name": "_Test Customer",
+			"customer_group": "_Test Customer Group",
+			"territory": "_Test Territory",
+			"party_name": "_Test Customer",
+			"opening_balance": 0,
+			"invoiced_amount": 100.0,
+			"paid_amount": 0.0,
+			"return_amount": 100.0,
+			"closing_balance": 0.0,
+			"currency": "INR",
+			"dr_or_cr": "",
+		}
+		# Without ignore_cr_dr_notes
+		columns, data = execute(
+			frappe._dict(
+				{
+					"company": si.company,
+					"from_date": si.posting_date,
+					"to_date": si.posting_date,
+					"ignore_cr_dr_notes": False,
+				}
+			)
+		)
+		self.assertEqual(len(data), 1)
+		self.assertDictEqual(expected, data[0])
+
+		# With ignore_cr_dr_notes
+		expected = {
+			"party": "_Test Customer",
+			"customer_name": "_Test Customer",
+			"customer_group": "_Test Customer Group",
+			"territory": "_Test Territory",
+			"party_name": "_Test Customer",
+			"opening_balance": 0,
+			"invoiced_amount": 100.0,
+			"paid_amount": 0.0,
+			"return_amount": 100.0,
+			"closing_balance": 0.0,
+			"currency": "INR",
+			"dr_or_cr": "",
+		}
+		columns, data = execute(
+			frappe._dict(
+				{
+					"company": si.company,
+					"from_date": si.posting_date,
+					"to_date": si.posting_date,
+					"ignore_cr_dr_notes": True,
+				}
+			)
+		)
+		self.assertEqual(len(data), 1)
+		self.assertEqual(expected, data[0])
+
+	def test_journal_voucher_against_return_invoice(self):
+		filters = {"company": self.company, "from_date": today(), "to_date": today()}
+
+		# Create Sales Invoice of 10 qty at rate 100 (Amount: 1000.0)
+		si1 = self.create_sales_invoice(do_not_submit=True)
+		si1.save().submit()
+
+		expected = {
+			"party": "_Test Customer",
+			"party_name": "_Test Customer",
+			"opening_balance": 0,
+			"invoiced_amount": 1000.0,
+			"paid_amount": 0,
+			"return_amount": 0,
+			"closing_balance": 1000.0,
+			"currency": "INR",
+			"customer_name": "_Test Customer",
+		}
+
+		report = execute(filters)[1]
+		self.assertEqual(len(report), 1)
+		for field in expected:
+			with self.subTest(field=field):
+				actual_value = report[0].get(field)
+				expected_value = expected.get(field)
+				self.assertEqual(
+					actual_value,
+					expected_value,
+					f"Field {field} does not match expected value. "
+					f"Expected: {expected_value}, Got: {actual_value}",
+				)
+
+		# Create Payment Entry (Receive) for the first invoice
+		pe1 = self.create_payment_entry(si1.name, True)
+		pe1.paid_amount = 1000  # Full payment 1000.0
+		pe1.save().submit()
+
+		expected_after_payment = {
+			"party": "_Test Customer",
+			"party_name": "_Test Customer",
+			"opening_balance": 0,
+			"invoiced_amount": 1000.0,
+			"paid_amount": 1000.0,
+			"return_amount": 0,
+			"closing_balance": 0.0,
+			"currency": "INR",
+			"customer_name": "_Test Customer",
+		}
+
+		report = execute(filters)[1]
+		self.assertEqual(len(report), 1)
+		for field in expected_after_payment:
+			with self.subTest(field=field):
+				actual_value = report[0].get(field)
+				expected_value = expected_after_payment.get(field)
+				self.assertEqual(
+					actual_value,
+					expected_value,
+					f"Field {field} does not match expected value. "
+					f"Expected: {expected_value}, Got: {actual_value}",
+				)
+
+		# Create Credit Note (return invoice) for first invoice (1000.0)
+		cr_note = self.create_credit_note(si1.name, do_not_submit=True)
+		cr_note.items[0].qty = -10  # 1 item of qty 10 at rate 100 (Amount: 1000.0)
+		cr_note.save().submit()
+
+		expected_after_cr_note = {
+			"party": "_Test Customer",
+			"party_name": "_Test Customer",
+			"opening_balance": 0,
+			"invoiced_amount": 1000.0,
+			"paid_amount": 1000.0,
+			"return_amount": 1000.0,
+			"closing_balance": -1000.0,
+			"currency": "INR",
+			"customer_name": "_Test Customer",
+		}
+
+		report = execute(filters)[1]
+		self.assertEqual(len(report), 1)
+		for field in expected_after_cr_note:
+			with self.subTest(field=field):
+				actual_value = report[0].get(field)
+				expected_value = expected_after_cr_note.get(field)
+				self.assertEqual(
+					actual_value,
+					expected_value,
+					f"Field {field} does not match expected value. "
+					f"Expected: {expected_value}, Got: {actual_value}",
+				)
+
+		# Create Payment Entry for the returned amount (1000.0) - Pay the customer back
+		pe2 = get_payment_entry("Sales Invoice", cr_note.name, bank_account=self.cash)
+		pe2.insert().submit()
+
+		expected_after_cr_and_return_payment = {
+			"party": "_Test Customer",
+			"party_name": "_Test Customer",
+			"opening_balance": 0,
+			"invoiced_amount": 1000.0,
+			"paid_amount": 0,
+			"return_amount": 1000.0,
+			"closing_balance": 0,
+			"currency": "INR",
+		}
+
+		report = execute(filters)[1]
+		self.assertEqual(len(report), 1)
+		for field in expected_after_cr_and_return_payment:
+			with self.subTest(field=field):
+				actual_value = report[0].get(field)
+				expected_value = expected_after_cr_and_return_payment.get(field)
+				self.assertEqual(
+					actual_value,
+					expected_value,
+					f"Field {field} does not match expected value. "
+					f"Expected: {expected_value}, Got: {actual_value}",
+				)
+
+		# Create second Sales Invoice of 10 qty at rate 100 (Amount: 1000.0)
+		si2 = self.create_sales_invoice(do_not_submit=True)
+		si2.save().submit()
+
+		# Create Payment Entry (Receive) for the second invoice - payment (500.0)
+		pe3 = self.create_payment_entry(si2.name, True)
+		pe3.paid_amount = 500  # Partial payment 500.0
+		pe3.save().submit()
+
+		expected_after_cr_and_payment = {
+			"party": "_Test Customer",
+			"party_name": "_Test Customer",
+			"opening_balance": 0.0,
+			"invoiced_amount": 2000.0,
+			"paid_amount": 500.0,
+			"return_amount": 1000.0,
+			"closing_balance": 500.0,
+			"currency": "INR",
+			"customer_name": "_Test Customer",
+		}
+
+		report = execute(filters)[1]
+		self.assertEqual(len(report), 1)
+		for field in expected_after_cr_and_payment:
+			with self.subTest(field=field):
+				actual_value = report[0].get(field)
+				expected_value = expected_after_cr_and_payment.get(field)
+				self.assertEqual(
+					actual_value,
+					expected_value,
+					f"Field {field} does not match expected value. "
+					f"Expected: {expected_value}, Got: {actual_value}",
+				)
+
+	def test_several_group_cost_centers_include_all_their_children(self):
+		for group in ("_Test CLS Group A", "_Test CLS Group B"):
+			create_cost_center(cost_center_name=group, is_group=1)
+			create_cost_center(cost_center_name=f"{group} Child", parent_cost_center=f"{group} - _TC")
+			self.cost_center = f"{group} Child - _TC"
+			self.create_sales_invoice()
+
+		filters = {
+			"company": self.company,
+			"from_date": today(),
+			"to_date": today(),
+			"cost_center": ["_Test CLS Group A - _TC", "_Test CLS Group B - _TC"],
+		}
+
+		report = execute(filters)[1]
+
+		self.assertEqual([(row.party, row.invoiced_amount) for row in report], [(self.customer, 2000.0)])
+
+	def test_refund_of_credit_note_from_before_the_period_is_a_negative_payment(self):
+		earlier = add_days(today(), -10)
+		si = self.create_sales_invoice(do_not_submit=True)
+		si.update({"posting_date": earlier, "set_posting_time": 1})
+		si.save().submit()
+		credit_note = self.create_credit_note(si.name, do_not_submit=True)
+		credit_note.update({"posting_date": earlier, "set_posting_time": 1})
+		credit_note.items[0].qty = -3
+		credit_note.save().submit()
+		get_payment_entry("Sales Invoice", credit_note.name, bank_account=self.cash).insert().submit()
+
+		row = execute({"company": self.company, "from_date": today(), "to_date": today()})[1][0]
+
+		self.assertEqual(
+			(row.opening_balance, row.invoiced_amount, row.paid_amount, row.closing_balance),
+			(700.0, 0.0, -300.0, 1000.0),
+		)
+
+	def test_company_without_permission_is_refused(self):
+		user = "test_cls_company_permission@example.com"
+		if not frappe.db.exists("User", user):
+			frappe.get_doc(
+				{"doctype": "User", "email": user, "first_name": "CLS", "roles": [{"role": "Accounts User"}]}
+			).insert()
+		frappe.permissions.add_user_permission("Company", "_Test Company 1", user)
+
+		frappe.set_user(user)
+		try:
+			self.assertRaises(
+				frappe.PermissionError,
+				execute,
+				{"company": self.company, "from_date": today(), "to_date": today()},
+			)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_amounts_follow_gl_entry_permissions(self):
+		from erpnext.accounts.doctype.account.test_account import create_account
+
+		other_receivable = create_account(
+			account_name="_Test CLS Receivable",
+			company=self.company,
+			parent_account="Accounts Receivable - _TC",
+			account_type="Receivable",
+		)
+		self.create_sales_invoice()
+		permitted_receivable, self.debit_to = self.debit_to, other_receivable
+		self.create_sales_invoice()
+
+		user = "test_cls_account_permission@example.com"
+		if not frappe.db.exists("User", user):
+			frappe.get_doc(
+				{"doctype": "User", "email": user, "first_name": "CLS", "roles": [{"role": "Accounts User"}]}
+			).insert()
+		frappe.permissions.add_user_permission("Account", permitted_receivable, user)
+
+		frappe.set_user(user)
+		try:
+			report = execute({"company": self.company, "from_date": today(), "to_date": today()})[1]
+		finally:
+			frappe.set_user("Administrator")
+
+		self.assertEqual([(row.party, row.invoiced_amount) for row in report], [(self.customer, 1000.0)])

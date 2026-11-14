@@ -1,14 +1,14 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
-import unittest
-
 import frappe
 
-test_records = frappe.get_test_records('Operation')
+from erpnext.tests.utils import ERPNextTestSuite
 
-class TestOperation(unittest.TestCase):
+
+class TestOperation(ERPNextTestSuite):
 	pass
+
 
 def make_operation(*args, **kwargs):
 	args = args if args else kwargs
@@ -17,15 +17,11 @@ def make_operation(*args, **kwargs):
 
 	args = frappe._dict(args)
 
-	try:
-		doc = frappe.get_doc({
-			"doctype": "Operation",
-			"name": args.operation,
-			"workstation": args.workstation
-		})
-
+	if not frappe.db.exists("Operation", args.operation):
+		doc = frappe.get_doc(
+			{"doctype": "Operation", "name": args.operation, "workstation": args.workstation}
+		)
 		doc.insert()
-
 		return doc
-	except frappe.DuplicateEntryError:
-		return frappe.get_doc("Operation", args.operation)
+
+	return frappe.get_doc("Operation", args.operation)

@@ -1,50 +1,117 @@
 # Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+from datetime import date
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder.functions import Sum
 from frappe.utils import flt, today
 
 
 class LoyaltyProgram(Document):
-	pass
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		from erpnext.accounts.doctype.loyalty_program_collection.loyalty_program_collection import (
+			LoyaltyProgramCollection,
+		)
+
+		auto_opt_in: DF.Check
+		collection_rules: DF.Table[LoyaltyProgramCollection]
+		company: DF.Link | None
+		conversion_factor: DF.Float
+		cost_center: DF.Link | None
+		customer_group: DF.Link | None
+		customer_territory: DF.Link | None
+		expense_account: DF.Link | None
+		expiry_duration: DF.Int
+		from_date: DF.Date
+		loyalty_program_name: DF.Data
+		loyalty_program_type: DF.Literal["Single Tier Program", "Multiple Tier Program"]
+		to_date: DF.Date | None
+	# end: auto-generated types
+
+	def validate(self):
+		self.validate_lowest_tier()
+
+	def validate_lowest_tier(self):
+		tiers = sorted(self.collection_rules, key=lambda x: flt(x.min_spent))
+		if tiers and flt(tiers[0].min_spent) != 0:
+			frappe.throw(
+				_(
+					"The lowest tier must have a minimum spent amount of 0. Customers need to be part of a tier as soon as they are enrolled in the program."
+				)
+			)
 
 
-def get_loyalty_details(customer, loyalty_program, expiry_date=None, company=None, include_expired_entry=False):
+def get_loyalty_details(
+	customer, loyalty_program, expiry_date=None, company=None, include_expired_entry=False
+):
 	if not expiry_date:
 		expiry_date = today()
 
-	condition = ''
-	if company:
-		condition = " and company=%s " % frappe.db.escape(company)
-	if not include_expired_entry:
-		condition += " and expiry_date>='%s' " % expiry_date
+	LoyaltyPointEntry = frappe.qb.DocType("Loyalty Point Entry")
 
-	loyalty_point_details = frappe.db.sql('''select sum(loyalty_points) as loyalty_points,
-		sum(purchase_amount) as total_spent from `tabLoyalty Point Entry`
-		where customer=%s and loyalty_program=%s and posting_date <= %s
-		{condition}
-		group by customer'''.format(condition=condition),
-		(customer, loyalty_program, expiry_date), as_dict=1)
+	query = (
+		frappe.qb.from_(LoyaltyPointEntry)
+		.select(
+			Sum(LoyaltyPointEntry.loyalty_points).as_("loyalty_points"),
+			Sum(LoyaltyPointEntry.purchase_amount).as_("total_spent"),
+		)
+		.where(
+			(LoyaltyPointEntry.customer == customer)
+			& (LoyaltyPointEntry.loyalty_program == loyalty_program)
+			& (LoyaltyPointEntry.posting_date <= expiry_date)
+		)
+		.groupby(LoyaltyPointEntry.customer)
+	)
+
+	if company:
+		query = query.where(LoyaltyPointEntry.company == company)
+
+	if not include_expired_entry:
+		query = query.where(LoyaltyPointEntry.expiry_date >= expiry_date)
+
+	loyalty_point_details = query.run(as_dict=True)
 
 	if loyalty_point_details:
 		return loyalty_point_details[0]
 	else:
 		return {"loyalty_points": 0, "total_spent": 0}
 
+
 @frappe.whitelist()
-def get_loyalty_program_details_with_points(customer, loyalty_program=None, expiry_date=None, company=None, \
-		silent=False, include_expired_entry=False, current_transaction_amount=0):
+def get_loyalty_program_details_with_points(
+	customer: str,
+	loyalty_program: str | None = None,
+	expiry_date: str | date | None = None,
+	company: str | None = None,
+	silent: bool = False,
+	include_expired_entry: bool = False,
+	current_transaction_amount: int | float = 0,
+):
+	frappe.has_permission("Customer", doc=customer, throw=True)
+
 	lp_details = get_loyalty_program_details(customer, loyalty_program, company=company, silent=silent)
 	loyalty_program = frappe.get_doc("Loyalty Program", loyalty_program)
-	lp_details.update(get_loyalty_details(customer, loyalty_program.name, expiry_date, company, include_expired_entry))
+	loyalty_details = get_loyalty_details(
+		customer, loyalty_program.name, expiry_date, company, include_expired_entry
+	)
+	lp_details.update(loyalty_details)
 
-	tier_spent_level = sorted([d.as_dict() for d in loyalty_program.collection_rules],
-		key=lambda rule:rule.min_spent, reverse=True)
+	tier_spent_level = sorted(
+		[d.as_dict() for d in loyalty_program.collection_rules],
+		key=lambda rule: rule.min_spent,
+	)
 	for i, d in enumerate(tier_spent_level):
-		if i==0 or (lp_details.total_spent+current_transaction_amount) <= d.min_spent:
+		if i == 0 or (lp_details.total_spent + current_transaction_amount) >= d.min_spent:
 			lp_details.tier_name = d.tier_name
 			lp_details.collection_factor = d.collection_factor
 		else:
@@ -52,8 +119,21 @@ def get_loyalty_program_details_with_points(customer, loyalty_program=None, expi
 
 	return lp_details
 
+
 @frappe.whitelist()
-def get_loyalty_program_details(customer, loyalty_program=None, expiry_date=None, company=None, silent=False, include_expired_entry=False):
+def get_loyalty_program_details(
+	customer: str,
+	loyalty_program: str | None = None,
+	expiry_date: str | date | None = None,
+	company: str | None = None,
+	silent: bool = False,
+	include_expired_entry: bool = False,
+):
+	# Same guard as get_loyalty_program_details_with_points above: the customer is what the caller
+	# is entitled to, not the programme. A check on Loyalty Program itself would be read-only to
+	# System Manager and would deny every role that actually fills in the two calling forms.
+	frappe.has_permission("Customer", doc=customer, throw=True)
+
 	lp_details = frappe._dict()
 
 	if not loyalty_program:
@@ -72,8 +152,16 @@ def get_loyalty_program_details(customer, loyalty_program=None, expiry_date=None
 	lp_details.update(loyalty_program.as_dict())
 	return lp_details
 
+
 @frappe.whitelist()
-def get_redeemption_factor(loyalty_program=None, customer=None):
+def get_redeemption_factor(loyalty_program: str | None = None, customer: str | None = None):
+	# both call sites send only `loyalty_program`, so the calling form is the boundary; the customer branch stays guarded
+	if not (frappe.has_permission("Sales Invoice") or frappe.has_permission("POS Invoice")):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	if customer:
+		frappe.has_permission("Customer", doc=customer, throw=True)
+
 	customer_loyalty_program = None
 	if not loyalty_program:
 		customer_loyalty_program = frappe.db.get_value("Customer", customer, "loyalty_program")
@@ -98,24 +186,32 @@ def validate_loyalty_points(ref_doc, points_to_redeem):
 	else:
 		loyalty_program = frappe.db.get_value("Customer", ref_doc.customer, ["loyalty_program"])
 
-	if loyalty_program and frappe.db.get_value("Loyalty Program", loyalty_program, ["company"]) !=\
-		ref_doc.company:
+	if (
+		loyalty_program
+		and frappe.db.get_value("Loyalty Program", loyalty_program, ["company"]) != ref_doc.company
+	):
 		frappe.throw(_("The Loyalty Program isn't valid for the selected company"))
 
 	if loyalty_program and points_to_redeem:
-		loyalty_program_details = get_loyalty_program_details_with_points(ref_doc.customer, loyalty_program,
-			posting_date, ref_doc.company)
+		if points_to_redeem < 0:
+			frappe.throw(_("Loyalty Points to redeem must be greater than 0."))
+
+		loyalty_program_details = get_loyalty_program_details_with_points(
+			ref_doc.customer, loyalty_program, posting_date, ref_doc.company
+		)
 
 		if points_to_redeem > loyalty_program_details.loyalty_points:
-			frappe.throw(_("You don't have enought Loyalty Points to redeem"))
+			frappe.throw(_("You don't have enough Loyalty Points to redeem"))
 
 		loyalty_amount = flt(points_to_redeem * loyalty_program_details.conversion_factor)
 
-		if loyalty_amount > ref_doc.grand_total:
-			frappe.throw(_("You can't redeem Loyalty Points having more value than the Grand Total."))
+		total_amount = ref_doc.grand_total if ref_doc.is_rounded_total_disabled() else ref_doc.rounded_total
+		if loyalty_amount > total_amount:
+			frappe.throw(_("You can't redeem Loyalty Points having more value than the Total Amount."))
 
-		if not ref_doc.loyalty_amount and ref_doc.loyalty_amount != loyalty_amount:
-			ref_doc.loyalty_amount = loyalty_amount
+		ref_doc.loyalty_amount = loyalty_amount
+		if not ref_doc.loyalty_points and ref_doc.loyalty_points != points_to_redeem:
+			ref_doc.loyalty_points = points_to_redeem
 
 		if ref_doc.doctype == "Sales Invoice":
 			ref_doc.loyalty_program = loyalty_program

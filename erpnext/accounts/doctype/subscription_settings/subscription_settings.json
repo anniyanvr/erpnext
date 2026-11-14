@@ -2,6 +2,7 @@
  "actions": [],
  "creation": "2018-02-26 06:13:37.910139",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/subscription-settings",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -12,7 +13,7 @@
  "fields": [
   {
    "default": "1",
-   "description": "Number of days after invoice date has elapsed before canceling subscription or marking subscription as unpaid",
+   "description": "Number of days after the invoice due date before canceling the subscription or marking it as unpaid",
    "fieldname": "grace_period",
    "fieldtype": "Int",
    "label": "Grace Period"
@@ -30,9 +31,12 @@
    "label": "Prorate"
   }
  ],
+ "grid_page_length": 50,
+ "hide_toolbar": 0,
+ "icon": "settings",
  "issingle": 1,
  "links": [],
- "modified": "2020-06-23 09:13:44.292792",
+ "modified": "2026-10-19 16:50:55.834144",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Subscription Settings",
@@ -70,7 +74,9 @@
   }
  ],
  "quick_entry": 1,
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

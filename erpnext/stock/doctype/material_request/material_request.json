@@ -3,41 +3,52 @@
  "allow_import": 1,
  "autoname": "naming_series:",
  "creation": "2013-03-07 14:48:38",
+ "description": "A request to buy, transfer or make items.",
  "doctype": "DocType",
  "document_type": "Document",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/material-request",
  "engine": "InnoDB",
  "field_order": [
   "type_section",
   "naming_series",
   "title",
   "material_request_type",
-  "transfer_status",
   "customer",
-  "status",
+  "company",
+  "auto_created_via_reorder",
   "column_break_2",
   "transaction_date",
   "schedule_date",
-  "company",
+  "buying_price_list",
   "amended_from",
   "warehouse_section",
-  "set_from_warehouse",
+  "scan_barcode",
+  "last_scanned_warehouse",
   "column_break5",
+  "set_from_warehouse",
   "set_warehouse",
   "items_section",
-  "scan_barcode",
   "items",
-  "more_info",
-  "per_ordered",
-  "column_break2",
-  "per_received",
-  "printing_details",
-  "letter_head",
-  "select_print_heading",
+  "terms_tab",
   "terms_section_break",
   "tc_name",
   "terms",
+  "more_info_tab",
+  "status_section",
+  "status",
+  "per_ordered",
+  "column_break2",
+  "transfer_status",
+  "per_received",
+  "printing_details",
+  "letter_head",
+  "column_break_31",
+  "select_print_heading",
   "reference",
-  "job_card"
+  "job_card",
+  "column_break_35",
+  "work_order",
+  "connections_tab"
  ],
  "fields": [
   {
@@ -59,7 +70,6 @@
   },
   {
    "allow_on_submit": 1,
-   "default": "{material_request_type}",
    "fieldname": "title",
    "fieldtype": "Data",
    "hidden": 1,
@@ -73,7 +83,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Purpose",
-   "options": "Purchase\nMaterial Transfer\nMaterial Issue\nManufacture\nCustomer Provided",
+   "options": "Purchase\nMaterial Transfer\nMaterial Issue\nManufacture\nSubcontracting\nCustomer Provided",
    "reqd": 1
   },
   {
@@ -92,6 +102,7 @@
    "allow_on_submit": 1,
    "fieldname": "schedule_date",
    "fieldtype": "Date",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Required By"
   },
@@ -147,17 +158,10 @@
    "reqd": 1
   },
   {
-   "collapsible": 1,
-   "fieldname": "more_info",
-   "fieldtype": "Section Break",
-   "label": "More Information",
-   "oldfieldtype": "Section Break",
-   "options": "fa fa-file-text"
-  },
-  {
    "default": "Today",
    "fieldname": "transaction_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Transaction Date",
    "no_copy": 1,
    "oldfieldname": "transaction_date",
@@ -182,7 +186,7 @@
    "no_copy": 1,
    "oldfieldname": "status",
    "oldfieldtype": "Select",
-   "options": "\nDraft\nSubmitted\nStopped\nCancelled\nPending\nPartially Ordered\nOrdered\nIssued\nTransferred\nReceived",
+   "options": "\nDraft\nSubmitted\nStopped\nCancelled\nPending\nPartially Ordered\nPartially Received\nOrdered\nIssued\nTransferred\nReceived",
    "print_hide": 1,
    "print_width": "100px",
    "read_only": 1,
@@ -238,7 +242,6 @@
    "collapsible_depends_on": "terms",
    "fieldname": "terms_section_break",
    "fieldtype": "Section Break",
-   "label": "Terms and Conditions",
    "oldfieldtype": "Section Break",
    "options": "fa fa-legal"
   },
@@ -271,18 +274,19 @@
    "label": "Job Card",
    "options": "Job Card",
    "print_hide": 1,
-   "read_only": 1
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "warehouse_section",
    "fieldtype": "Section Break",
-   "label": "Warehouse"
+   "hide_border": 1,
+   "label": "Items"
   },
   {
-   "description": "Sets 'Target Warehouse' in each row of the Items table.",
    "fieldname": "set_warehouse",
    "fieldtype": "Link",
-   "in_list_view": 1,
+   "in_import_template": 1,
    "label": "Set Target Warehouse",
    "options": "Warehouse"
   },
@@ -295,9 +299,9 @@
   },
   {
    "depends_on": "eval:doc.material_request_type == 'Material Transfer'",
-   "description": "Sets 'Source Warehouse' in each row of the Items table.",
    "fieldname": "set_from_warehouse",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Set Source Warehouse",
    "options": "Warehouse"
   },
@@ -307,18 +311,82 @@
    "fieldname": "transfer_status",
    "fieldtype": "Select",
    "label": "Transfer Status",
+   "no_copy": 1,
    "options": "\nNot Started\nIn Transit\nCompleted",
+   "read_only": 1
+  },
+  {
+   "fieldname": "work_order",
+   "fieldtype": "Link",
+   "label": "Work Order",
+   "options": "Work Order",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "terms_tab",
+   "fieldtype": "Tab Break",
+   "label": "Terms"
+  },
+  {
+   "fieldname": "more_info_tab",
+   "fieldtype": "Tab Break",
+   "label": "More Info"
+  },
+  {
+   "fieldname": "connections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connections",
+   "show_dashboard": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status",
+   "oldfieldtype": "Section Break",
+   "options": "fa fa-file-text"
+  },
+  {
+   "fieldname": "column_break_31",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_35",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "buying_price_list",
+   "fieldtype": "Link",
+   "label": "Price List",
+   "options": "Price List"
+  },
+  {
+   "depends_on": "eval: doc.last_scanned_warehouse",
+   "fieldname": "last_scanned_warehouse",
+   "fieldtype": "Data",
+   "is_virtual": 1,
+   "label": "Last Scanned Warehouse"
+  },
+  {
+   "default": "0",
+   "depends_on": "auto_created_via_reorder",
+   "fieldname": "auto_created_via_reorder",
+   "fieldtype": "Check",
+   "label": "Auto Created (Reorder)",
+   "no_copy": 1,
    "read_only": 1
   }
  ],
- "icon": "fa fa-ticket",
+ "icon": "clipboard-list",
  "idx": 70,
  "is_submittable": 1,
  "links": [],
- "modified": "2021-08-17 20:16:12.737743",
+ "modified": "2026-10-14 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Material Request",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -333,7 +401,6 @@
    "read": 1,
    "report": 1,
    "role": "Purchase Manager",
-   "set_user_permissions": 1,
    "share": 1,
    "submit": 1,
    "write": 1
@@ -379,12 +446,31 @@
    "share": 1,
    "submit": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager"
+  },
+  {
+   "role": "Delivery Manager",
+   "select": 1
+  },
+  {
+   "role": "Delivery User",
+   "select": 1
+  },
+  {
+   "role": "Maintenance User",
+   "select": 1
   }
  ],
  "quick_entry": 1,
+ "row_format": "Dynamic",
  "search_fields": "status,transaction_date",
  "show_name_in_global_search": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "title"
 }

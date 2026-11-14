@@ -1,101 +1,215 @@
 # Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+from itertools import groupby
 
 import frappe
-import pandas as pd
 from frappe import _
-
-from erpnext.accounts.report.utils import convert
+from frappe.query_builder.functions import Count
+from frappe.utils import flt
 
 
 def validate_filters(from_date, to_date, company):
-	if from_date and to_date and (from_date >= to_date):
+	if from_date and to_date and (from_date > to_date):
 		frappe.throw(_("To Date must be greater than From Date"))
 
 	if not company:
-		frappe.throw(_("Please Select a Company"))
+		frappe.throw(_("Please select a Company"))
+
+
+def base_amount(opportunity):
+	# company-currency value: convert via the live rate, falling back to the stored base
+	return flt(opportunity["opportunity_amount"]) * flt(opportunity["conversion_rate"]) or flt(
+		opportunity["base_opportunity_amount"]
+	)
+
 
 @frappe.whitelist()
-def get_funnel_data(from_date, to_date, company):
+def get_funnel_data(from_date: str, to_date: str, company: str):
+	frappe.has_permission("Company", doc=company, throw=True)
+
 	validate_filters(from_date, to_date, company)
 
-	active_leads = frappe.db.sql("""select count(*) from `tabLead`
-		where (date(`creation`) between %s and %s)
-		and company=%s""", (from_date, to_date, company))[0][0]
+	date_range = ("between", [from_date, to_date])
 
-	opportunities = frappe.db.sql("""select count(*) from `tabOpportunity`
-		where (date(`creation`) between %s and %s)
-		and opportunity_from='Lead' and company=%s""", (from_date, to_date, company))[0][0]
+	active_leads = len(
+		frappe.qb.get_query(
+			"Lead",
+			fields=["name"],
+			filters={"creation": date_range, "company": company},
+			ignore_permissions=False,
+		).run(pluck="name")
+	)
 
-	quotations = frappe.db.sql("""select count(*) from `tabQuotation`
-		where docstatus = 1 and (date(`creation`) between %s and %s)
-		and (opportunity!="" or quotation_to="Lead") and company=%s""", (from_date, to_date, company))[0][0]
+	opportunities = len(
+		frappe.qb.get_query(
+			"Opportunity",
+			fields=["name"],
+			filters={"creation": date_range, "opportunity_from": "Lead", "company": company},
+			ignore_permissions=False,
+		).run(pluck="name")
+	)
 
-	converted = frappe.db.sql("""select count(*) from `tabCustomer`
-		JOIN `tabLead` ON `tabLead`.name = `tabCustomer`.lead_name
-		WHERE (date(`tabCustomer`.creation) between %s and %s)
-		and `tabLead`.company=%s""", (from_date, to_date, company))[0][0]
+	quotations = 0
+	quotation_names = frappe.qb.get_query(
+		"Quotation",
+		fields=["name"],
+		filters={"docstatus": 1, "creation": date_range, "company": company},
+		ignore_permissions=False,
+	).run(pluck="name")
+	if quotation_names:
+		lead_opportunities = frappe.qb.get_query(
+			"Opportunity",
+			fields=["name"],
+			filters={"opportunity_from": "Lead"},
+			ignore_permissions=False,
+		).run(pluck="name")
+		quotation = frappe.qb.DocType("Quotation")
+		condition = quotation.quotation_to == "Lead"
+		if lead_opportunities:
+			condition = condition | quotation.opportunity.isin(lead_opportunities)
+		quotations = (
+			frappe.qb.from_(quotation)
+			.select(Count("*"))
+			.where(quotation.name.isin(quotation_names) & condition)
+			.run()
+		)[0][0]
 
+	converted = 0
+	customer_names = frappe.qb.get_query(
+		"Customer",
+		fields=["name"],
+		filters={"creation": date_range},
+		ignore_permissions=False,
+	).run(pluck="name")
+	if customer_names:
+		customer = frappe.qb.DocType("Customer")
+		lead = frappe.qb.DocType("Lead")
+		converted = (
+			frappe.qb.from_(customer)
+			.inner_join(lead)
+			.on(lead.name == customer.lead_name)
+			.select(Count("*"))
+			.where(customer.name.isin(customer_names) & (lead.company == company))
+			.run()
+		)[0][0]
 
 	return [
-		{ "title": _("Active Leads"), "value": active_leads, "color": "#B03B46" },
-		{ "title": _("Opportunities"), "value": opportunities, "color": "#F09C00" },
-		{ "title": _("Quotations"), "value": quotations, "color": "#006685" },
-		{ "title": _("Converted"), "value": converted, "color": "#00AD65" }
+		{"title": _("Active Leads"), "value": active_leads, "color": "#B03B46"},
+		{"title": _("Opportunities"), "value": opportunities, "color": "#F09C00"},
+		{"title": _("Quotations"), "value": quotations, "color": "#006685"},
+		{"title": _("Converted"), "value": converted, "color": "#00AD65"},
 	]
 
+
 @frappe.whitelist()
-def get_opp_by_lead_source(from_date, to_date, company):
+def get_opp_by_utm_source(from_date: str, to_date: str, company: str):
+	return get_opp_by("utm_source", from_date, to_date, company, ignore_permissions=False)
+
+
+@frappe.whitelist()
+def get_opp_by_utm_campaign(from_date: str, to_date: str, company: str):
+	return get_opp_by("utm_campaign", from_date, to_date, company, ignore_permissions=False)
+
+
+@frappe.whitelist()
+def get_opp_by_utm_medium(from_date: str, to_date: str, company: str):
+	return get_opp_by("utm_medium", from_date, to_date, company, ignore_permissions=False)
+
+
+def get_opp_by(by_field, from_date, to_date, company, ignore_permissions=False):
 	validate_filters(from_date, to_date, company)
 
-	opportunities = frappe.get_all("Opportunity", filters=[['status', 'in', ['Open', 'Quotation', 'Replied']], ['company', '=', company], ['transaction_date', 'Between', [from_date, to_date]]], fields=['currency', 'sales_stage', 'opportunity_amount', 'probability', 'source'])
+	get_opportunities = frappe.get_all if ignore_permissions else frappe.get_list
+	opportunities = get_opportunities(
+		"Opportunity",
+		filters=[
+			["status", "in", ["Open", "Quotation", "Replied"]],
+			["company", "=", company],
+			["transaction_date", "Between", [from_date, to_date]],
+		],
+		fields=[
+			"sales_stage",
+			"base_opportunity_amount",
+			"opportunity_amount",
+			"conversion_rate",
+			"probability",
+			by_field,
+		],
+	)
 
 	if opportunities:
-		default_currency = frappe.get_cached_value('Global Defaults', 'None',  'default_currency')
+		cp_opportunities = [
+			dict(
+				x,
+				**{"compound_amount": (base_amount(x) * x["probability"] / 100)},
+			)
+			for x in opportunities
+			if x.get(by_field)
+		]
 
-		cp_opportunities = [dict(x, **{'compound_amount': (convert(x['opportunity_amount'], x['currency'], default_currency, to_date) * x['probability']/100)}) for x in opportunities]
+		summary = {}
+		sales_stages = set()
+		group_key = lambda o: (o[by_field], o["sales_stage"])  # noqa
+		for (by_field_group, sales_stage), rows in groupby(
+			sorted(cp_opportunities, key=group_key), group_key
+		):
+			summary.setdefault(by_field_group, {})[sales_stage] = sum(r["compound_amount"] for r in rows)
+			sales_stages.add(sales_stage)
 
-		df = pd.DataFrame(cp_opportunities).groupby(['source', 'sales_stage'], as_index=False).agg({'compound_amount': 'sum'})
+		pivot_table = []
+		for sales_stage in sales_stages:
+			row = []
+			for sales_stage_values in summary.values():
+				row.append(flt(sales_stage_values.get(sales_stage)))
+			pivot_table.append({"chartType": "bar", "name": sales_stage, "values": row})
 
-		result = {}
-		result['labels'] = list(set(df.source.values))
-		result['datasets'] = []
-
-		for s in set(df.sales_stage.values):
-			result['datasets'].append({'name': s, 'values': [0]*len(result['labels']), 'chartType': 'bar'})
-
-		for row in df.itertuples():
-			source_index = result['labels'].index(row.source)
-
-			for dataset in result['datasets']:
-				if dataset['name'] == row.sales_stage:
-					dataset['values'][source_index] = row.compound_amount
-
+		result = {"datasets": pivot_table, "labels": list(summary.keys())}
 		return result
 
 	else:
-		return 'empty'
+		return "empty"
+
 
 @frappe.whitelist()
-def get_pipeline_data(from_date, to_date, company):
+def get_pipeline_data(from_date: str, to_date: str, company: str):
 	validate_filters(from_date, to_date, company)
 
-	opportunities = frappe.get_all("Opportunity", filters=[['status', 'in', ['Open', 'Quotation', 'Replied']], ['company', '=', company], ['transaction_date', 'Between', [from_date, to_date]]], fields=['currency', 'sales_stage', 'opportunity_amount', 'probability'])
+	opportunities = frappe.get_list(
+		"Opportunity",
+		filters=[
+			["status", "in", ["Open", "Quotation", "Replied"]],
+			["company", "=", company],
+			["transaction_date", "Between", [from_date, to_date]],
+		],
+		fields=[
+			"sales_stage",
+			"base_opportunity_amount",
+			"opportunity_amount",
+			"conversion_rate",
+			"probability",
+		],
+	)
 
 	if opportunities:
-		default_currency = frappe.get_cached_value('Global Defaults', 'None',  'default_currency')
+		cp_opportunities = [
+			dict(
+				x,
+				**{"compound_amount": (base_amount(x) * x["probability"] / 100)},
+			)
+			for x in opportunities
+		]
 
-		cp_opportunities = [dict(x, **{'compound_amount': (convert(x['opportunity_amount'], x['currency'], default_currency, to_date) * x['probability']/100)}) for x in opportunities]
+		summary = {}
+		for opportunity in cp_opportunities:
+			sales_stage = opportunity["sales_stage"]
+			summary[sales_stage] = summary.get(sales_stage, 0) + flt(opportunity["compound_amount"])
 
-		df = pd.DataFrame(cp_opportunities).groupby(['sales_stage'], as_index=True).agg({'compound_amount': 'sum'}).to_dict()
-
-		result = {}
-		result['labels'] = df['compound_amount'].keys()
-		result['datasets'] = []
-		result['datasets'].append({'name': _("Total Amount"), 'values': df['compound_amount'].values(), 'chartType': 'bar'})
-
+		result = {
+			"labels": list(summary.keys()),
+			"datasets": [{"name": _("Total Amount"), "values": list(summary.values()), "chartType": "bar"}],
+		}
 		return result
 
 	else:
-		return 'empty'
+		return "empty"

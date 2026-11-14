@@ -4,6 +4,7 @@
  "allow_rename": 1,
  "autoname": "field:account_type",
  "creation": "2018-10-25 15:45:45.789963",
+ "description": "A grouping of bank accounts, like checking or credit card.",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -18,8 +19,9 @@
    "unique": 1
   }
  ],
+ "icon": "credit-card",
  "links": [],
- "modified": "2020-04-10 21:13:09.137898",
+ "modified": "2024-03-27 13:06:37.347035",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Bank Account Type",
@@ -63,6 +65,7 @@
   }
  ],
  "quick_entry": 1,
- "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
 }

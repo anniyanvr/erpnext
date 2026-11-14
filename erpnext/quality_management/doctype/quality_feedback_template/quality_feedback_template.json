@@ -2,7 +2,9 @@
  "actions": [],
  "autoname": "field:template",
  "creation": "2019-05-26 21:17:24.283061",
+ "description": "The questions to ask when collecting quality feedback.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/quality-feedback-template",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -31,6 +33,7 @@
    "reqd": 1
   }
  ],
+ "icon": "file-text",
  "links": [
   {
    "group": "Records",
@@ -38,7 +41,7 @@
    "link_fieldname": "template"
   }
  ],
- "modified": "2020-10-27 16:18:53.579688",
+ "modified": "2026-10-05 17:08:31.742391",
  "modified_by": "Administrator",
  "module": "Quality Management",
  "name": "Quality Feedback Template",
@@ -55,10 +58,15 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Quality Manager"
   }
  ],
  "quick_entry": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

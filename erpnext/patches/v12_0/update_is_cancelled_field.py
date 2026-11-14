@@ -2,14 +2,33 @@ import frappe
 
 
 def execute():
-	try:
-		frappe.db.sql("UPDATE `tabStock Ledger Entry` SET is_cancelled = 0 where is_cancelled in ('', NULL, 'No')")
-		frappe.db.sql("UPDATE `tabSerial No` SET is_cancelled = 0 where is_cancelled in ('', NULL, 'No')")
+	# handle type casting for is_cancelled field
+	module_doctypes = (
+		("stock", "Stock Ledger Entry"),
+		("stock", "Serial No"),
+		("accounts", "GL Entry"),
+	)
 
-		frappe.db.sql("UPDATE `tabStock Ledger Entry` SET is_cancelled = 1 where is_cancelled = 'Yes'")
-		frappe.db.sql("UPDATE `tabSerial No` SET is_cancelled = 1 where is_cancelled = 'Yes'")
+	for module, doctype in module_doctypes:
+		if (
+			not frappe.db.has_column(doctype, "is_cancelled")
+			or frappe.db.get_column_type(doctype, "is_cancelled").lower() == "int(1)"
+		):
+			continue
 
-		frappe.reload_doc("stock", "doctype", "stock_ledger_entry")
-		frappe.reload_doc("stock", "doctype", "serial_no")
-	except Exception:
-		pass
+		# nosemgrep: frappe-semgrep-rules.rules.security.frappe-sql-format-injection -- formats table or column names, or fixed conditions
+		frappe.db.sql(
+			f"""
+				UPDATE `tab{doctype}`
+				SET is_cancelled = 0
+				where is_cancelled in ('', 'No') or is_cancelled is NULL"""
+		)
+		# nosemgrep: frappe-semgrep-rules.rules.security.frappe-sql-format-injection -- formats table or column names, or fixed conditions
+		frappe.db.sql(
+			f"""
+				UPDATE `tab{doctype}`
+				SET is_cancelled = 1
+				where is_cancelled = 'Yes'"""
+		)
+
+		frappe.reload_doc(module, "doctype", frappe.scrub(doctype))

@@ -1,45 +1,79 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "autoname": "naming_series:",
- "creation": "2018-07-09 17:23:29.518745",
+ "creation": "2026-03-31 21:06:16.282931",
+ "description": "The work done for one operation of a work order.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/job-card",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "naming_series",
+  "section_break_smqo",
+  "job_card_dashboard",
+  "section_break_fsba",
   "work_order",
+  "operation",
+  "for_quantity",
+  "workstation",
+  "column_break_uqjq",
+  "stock_uom",
+  "production_item",
   "bom_no",
+  "employee",
+  "section_break_oisd",
+  "company",
+  "naming_series",
   "column_break_4",
   "posting_date",
-  "company",
+  "semi_finished_good__finished_good_section",
+  "finished_good",
+  "semi_fg_bom",
+  "column_break_mcnb",
+  "batch_split",
+  "weight_per_piece",
   "production_section",
-  "production_item",
-  "item_name",
-  "for_quantity",
-  "serial_no",
+  "workstation_type",
+  "source_warehouse",
   "column_break_12",
+  "skip_material_transfer",
+  "backflush_from_wip_warehouse",
+  "track_semi_finished_goods",
   "wip_warehouse",
-  "quality_inspection",
-  "project",
-  "batch_no",
-  "operation_section_section",
-  "operation",
-  "operation_row_number",
-  "column_break_18",
-  "workstation",
-  "employee",
-  "section_break_21",
-  "sub_operations",
-  "timing_detail",
-  "time_logs",
-  "section_break_13",
+  "target_warehouse",
+  "section_break_folk",
+  "pending_qty",
+  "process_loss_qty",
   "total_completed_qty",
-  "column_break_15",
-  "total_time_in_mins",
+  "section_break_wpjf",
+  "manufactured_qty",
+  "transferred_qty",
+  "raw_material_tab",
   "section_break_8",
   "items",
-  "scrap_items_section",
-  "scrap_items",
+  "quality_inspection_section",
+  "quality_inspection_template",
+  "column_break_fcmp",
+  "quality_inspection",
+  "scheduled_time_tab",
+  "scheduled_time_section",
+  "expected_start_date",
+  "time_required",
+  "column_break_jkir",
+  "expected_end_date",
+  "section_break_rzeo",
+  "scheduled_time_logs",
+  "section_break_13",
+  "actual_start_date",
+  "total_time_in_mins",
+  "column_break_15",
+  "actual_end_date",
+  "section_break_jbas",
+  "time_logs",
+  "section_break_21",
+  "sub_operations",
+  "secondary_items_section",
+  "secondary_items",
   "corrective_operation_section",
   "for_job_card",
   "is_corrective_job_card",
@@ -47,18 +81,27 @@
   "hour_rate",
   "for_operation",
   "more_information",
+  "item_name",
+  "requested_qty",
+  "is_paused",
+  "is_subcontracted",
+  "column_break_20",
+  "project",
+  "remarks",
+  "section_break_dfoc",
+  "status",
+  "operation_row_id",
+  "amended_from",
+  "column_break_xhzg",
   "operation_id",
   "sequence_id",
-  "transferred_qty",
-  "requested_qty",
-  "status",
-  "column_break_20",
-  "remarks",
+  "section_break_jcmx",
+  "serial_no",
+  "serial_and_batch_bundle",
+  "column_break_swqr",
   "barcode",
-  "job_started",
-  "started_time",
-  "current_time",
-  "amended_from"
+  "batch_no",
+  "connections_tab"
  ],
  "fields": [
   {
@@ -72,10 +115,11 @@
    "search_index": 1
   },
   {
+   "depends_on": "eval:!doc.finished_good",
    "fetch_from": "work_order.bom_no",
    "fieldname": "bom_no",
    "fieldtype": "Link",
-   "label": "BOM No",
+   "label": "Final BOM",
    "options": "BOM",
    "read_only": 1
   },
@@ -91,6 +135,7 @@
    "fieldname": "operation",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_preview": 1,
    "label": "Operation",
    "options": "Operation",
    "reqd": 1
@@ -116,19 +161,23 @@
    "fieldname": "for_quantity",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Qty To Manufacture"
+   "in_preview": 1,
+   "label": "Qty to Manufacture"
+  },
+  {
+   "fieldname": "stock_uom",
+   "fieldtype": "Link",
+   "label": "Stock UOM",
+   "options": "UOM",
+   "read_only": 1
   },
   {
    "fieldname": "wip_warehouse",
    "fieldtype": "Link",
    "label": "WIP Warehouse",
-   "options": "Warehouse",
-   "reqd": 1
-  },
-  {
-   "fieldname": "timing_detail",
-   "fieldtype": "Section Break",
-   "label": "Timing Detail"
+   "link_filters": "[[\"Warehouse\",\"disabled\",\"=\",0],[\"Warehouse\",\"is_group\",\"=\",0]]",
+   "mandatory_depends_on": "eval:!doc.finished_good || doc.skip_material_transfer === 0 || (doc.skip_material_transfer && doc.backflush_from_wip_warehouse)",
+   "options": "Warehouse"
   },
   {
    "allow_bulk_edit": 1,
@@ -140,13 +189,18 @@
   {
    "fieldname": "section_break_13",
    "fieldtype": "Section Break",
-   "hide_border": 1
+   "hide_border": 1,
+   "label": "Actual Time"
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
+   "depends_on": "eval:doc.is_subcontracted===0",
    "fieldname": "total_completed_qty",
    "fieldtype": "Float",
-   "label": "Total Completed Qty",
+   "in_preview": 1,
+   "label": "Total Completed qty",
+   "non_negative": 1,
    "read_only": 1
   },
   {
@@ -161,8 +215,7 @@
   },
   {
    "fieldname": "section_break_8",
-   "fieldtype": "Section Break",
-   "label": "Raw Materials"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "items",
@@ -173,8 +226,8 @@
   {
    "collapsible": 1,
    "fieldname": "more_information",
-   "fieldtype": "Section Break",
-   "label": "More Information"
+   "fieldtype": "Tab Break",
+   "label": "More Info"
   },
   {
    "fieldname": "operation_id",
@@ -185,13 +238,15 @@
   },
   {
    "default": "0",
+   "depends_on": "items",
    "fieldname": "transferred_qty",
    "fieldtype": "Float",
-   "label": "FG Qty from Transferred Raw Materials",
+   "label": "Transferred Raw Materials",
    "read_only": 1
   },
   {
    "default": "0",
+   "depends_on": "eval:!doc.is_corrective_job_card",
    "fieldname": "requested_qty",
    "fieldtype": "Float",
    "label": "Requested Qty",
@@ -213,31 +268,13 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "default": "Open",
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
    "no_copy": 1,
-   "options": "Open\nWork In Progress\nMaterial Transferred\nOn Hold\nSubmitted\nCancelled\nCompleted",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "job_started",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Job Started",
-   "no_copy": 1,
-   "print_hide": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "started_time",
-   "fieldtype": "Datetime",
-   "hidden": 1,
-   "label": "Started Time",
-   "no_copy": 1,
-   "print_hide": 1,
+   "options": "Open\nWork In Progress\nPartially Transferred\nMaterial Transferred\nOn Hold\nSubmitted\nTo Manufacture\nCancelled\nCompleted",
    "read_only": 1
   },
   {
@@ -254,24 +291,25 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Naming Series",
+   "no_copy": 1,
    "options": "PO-JOB.#####",
    "reqd": 1
   },
   {
-   "collapsible": 1,
    "fieldname": "production_section",
    "fieldtype": "Section Break",
-   "label": "Production"
+   "label": "Warehouse"
   },
   {
    "fieldname": "column_break_12",
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "eval:!doc.finished_good",
    "fetch_from": "work_order.production_item",
    "fieldname": "production_item",
    "fieldtype": "Link",
-   "label": "Production Item",
+   "label": "Final Product",
    "options": "Item",
    "read_only": 1
   },
@@ -286,21 +324,8 @@
    "fetch_if_empty": 1,
    "fieldname": "item_name",
    "fieldtype": "Read Only",
-   "label": "Item Name"
-  },
-  {
-   "fieldname": "current_time",
-   "fieldtype": "Int",
-   "hidden": 1,
-   "label": "Current Time",
-   "no_copy": 1,
-   "print_hide": 1,
+   "label": "Item Name",
    "read_only": 1
-  },
-  {
-   "fieldname": "operation_row_number",
-   "fieldtype": "Select",
-   "label": "Operation Row Number"
   },
   {
    "fieldname": "sequence_id",
@@ -326,18 +351,10 @@
    "read_only": 1
   },
   {
-   "fieldname": "operation_section_section",
-   "fieldtype": "Section Break",
-   "label": "Operation Section"
-  },
-  {
-   "fieldname": "column_break_18",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "section_break_21",
-   "fieldtype": "Section Break",
-   "hide_border": 1
+   "fieldtype": "Tab Break",
+   "hide_border": 1,
+   "label": "Sub Operations"
   },
   {
    "depends_on": "is_corrective_job_card",
@@ -349,7 +366,7 @@
    "collapsible": 1,
    "depends_on": "is_corrective_job_card",
    "fieldname": "corrective_operation_section",
-   "fieldtype": "Section Break",
+   "fieldtype": "Tab Break",
    "label": "Corrective Operation"
   },
   {
@@ -379,39 +396,316 @@
    "options": "Operation"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "employee",
    "fieldtype": "Table MultiSelect",
    "label": "Employee",
-   "options": "Job Card Time Log"
+   "options": "Job Card Time Log",
+   "read_only": 1
   },
   {
    "fieldname": "serial_no",
    "fieldtype": "Small Text",
-   "label": "Serial No"
+   "hidden": 1,
+   "label": "Serial No",
+   "read_only": 1
   },
   {
    "fieldname": "batch_no",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Batch No",
-   "options": "Batch"
+   "options": "Batch",
+   "read_only": 1
   },
   {
-   "fieldname": "scrap_items_section",
-   "fieldtype": "Section Break",
-   "label": "Scrap Items"
+   "fetch_from": "operation.quality_inspection_template",
+   "fieldname": "quality_inspection_template",
+   "fieldtype": "Link",
+   "label": "Quality Inspection Template",
+   "options": "Quality Inspection Template"
   },
   {
-   "fieldname": "scrap_items",
-   "fieldtype": "Table",
-   "label": "Scrap Items",
+   "fieldname": "workstation_type",
+   "fieldtype": "Link",
+   "label": "Workstation Type",
+   "options": "Workstation Type"
+  },
+  {
+   "fieldname": "expected_start_date",
+   "fieldtype": "Datetime",
+   "label": "Expected Start Date"
+  },
+  {
+   "fieldname": "expected_end_date",
+   "fieldtype": "Datetime",
+   "label": "Expected End Date"
+  },
+  {
+   "fieldname": "serial_and_batch_bundle",
+   "fieldtype": "Link",
+   "label": "Serial and Batch Bundle",
    "no_copy": 1,
-   "options": "Job Card Scrap Item",
+   "options": "Serial and Batch Bundle",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "depends_on": "process_loss_qty",
+   "fieldname": "process_loss_qty",
+   "fieldtype": "Float",
+   "label": "Process Loss qty",
+   "read_only": 1
+  },
+  {
+   "fieldname": "connections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connections",
+   "show_dashboard": 1
+  },
+  {
+   "fieldname": "scheduled_time_section",
+   "fieldtype": "Section Break",
+   "hide_border": 1,
+   "label": "Scheduled Time"
+  },
+  {
+   "fieldname": "column_break_jkir",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "time_required",
+   "fieldtype": "Float",
+   "label": "Expected Time Required (In Mins)"
+  },
+  {
+   "fieldname": "scheduled_time_logs",
+   "fieldtype": "Table",
+   "label": "Scheduled Time Logs",
+   "options": "Job Card Scheduled Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "actual_start_date",
+   "fieldtype": "Datetime",
+   "label": "Actual Start Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "actual_end_date",
+   "fieldtype": "Datetime",
+   "label": "Actual End Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "quality_inspection_section",
+   "fieldtype": "Section Break",
+   "label": "Quality Inspection"
+  },
+  {
+   "fieldname": "column_break_fcmp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "finished_good",
+   "fieldtype": "Link",
+   "in_preview": 1,
+   "label": "Item to Manufacture",
+   "options": "Item",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.track_semi_finished_goods",
+   "fieldname": "target_warehouse",
+   "fieldtype": "Link",
+   "label": "Target Warehouse",
+   "link_filters": "[[\"Warehouse\",\"disabled\",\"=\",0],[\"Warehouse\",\"is_group\",\"=\",0]]",
+   "mandatory_depends_on": "eval:doc.track_semi_finished_goods",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "operation_row_id",
+   "fieldtype": "Int",
+   "label": "Operation Row ID"
+  },
+  {
+   "fieldname": "source_warehouse",
+   "fieldtype": "Link",
+   "label": "Source Warehouse",
+   "link_filters": "[[\"Warehouse\",\"disabled\",\"=\",0],[\"Warehouse\",\"is_group\",\"=\",0]]",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "semi_finished_good__finished_good_section",
+   "fieldtype": "Section Break",
+   "label": "Semi Finished Good / Finished Good"
+  },
+  {
+   "fieldname": "semi_fg_bom",
+   "fieldtype": "Link",
+   "label": "Manufacturing BOM",
+   "options": "BOM",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "batch_split",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Batch Split",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.batch_split",
+   "fieldname": "weight_per_piece",
+   "fieldtype": "Float",
+   "label": "Weight Per Piece",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:!doc.is_corrective_job_card",
+   "fieldname": "is_subcontracted",
+   "fieldtype": "Check",
+   "label": "Is Subcontracted",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_mcnb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_rzeo",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_jbas",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "scheduled_time_tab",
+   "fieldtype": "Tab Break",
+   "label": "Time logs"
+  },
+  {
+   "depends_on": "finished_good",
+   "fieldname": "manufactured_qty",
+   "fieldtype": "Float",
+   "label": "Manufactured Qty",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.finished_good",
+   "fieldname": "skip_material_transfer",
+   "fieldtype": "Check",
+   "label": "Skip Material Transfer to WIP"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.finished_good && doc.skip_material_transfer === 1",
+   "fieldname": "backflush_from_wip_warehouse",
+   "fieldtype": "Check",
+   "label": "Backflush Materials from WIP Warehouse"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_paused",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Paused",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:!doc.is_corrective_job_card",
+   "description": "Each operation produces its own output item and puts it in stock, for example Cut Sheet, then Painted Sheet, then the final Box.",
+   "fetch_from": "work_order.track_semi_finished_goods",
+   "fieldname": "track_semi_finished_goods",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Produce Item per Operation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_jcmx",
+   "fieldtype": "Section Break",
+   "label": "Serial / Batch"
+  },
+  {
+   "fieldname": "column_break_swqr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_dfoc",
+   "fieldtype": "Section Break",
+   "label": "Status and Reference"
+  },
+  {
+   "fieldname": "column_break_xhzg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "secondary_items",
+   "fieldtype": "Table",
+   "label": "Secondary Items",
+   "no_copy": 1,
+   "options": "Job Card Secondary Item",
    "print_hide": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "secondary_items_section",
+   "fieldtype": "Tab Break",
+   "label": "Secondary Items"
+  },
+  {
+   "fieldname": "section_break_folk",
+   "fieldtype": "Section Break",
+   "hide_border": 1,
+   "label": "Progress"
+  },
+  {
+   "fieldname": "pending_qty",
+   "fieldtype": "Float",
+   "label": "Pending qty"
+  },
+  {
+   "fieldname": "section_break_wpjf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "job_card_dashboard",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_oisd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_uqjq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_smqo",
+   "fieldtype": "Section Break",
+   "hide_border": 1
+  },
+  {
+   "fieldname": "section_break_fsba",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "raw_material_tab",
+   "fieldtype": "Tab Break",
+   "label": "Raw Materials"
   }
  ],
+ "grid_page_length": 50,
+ "icon": "clipboard-list",
  "is_submittable": 1,
  "links": [],
- "modified": "2021-09-14 00:38:46.873105",
+ "modified": "2026-11-04 18:54:22.353167",
  "modified_by": "Administrator",
  "module": "Manufacturing",
  "name": "Job Card",
@@ -464,8 +758,11 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "show_preview_popup": 1,
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "operation",
  "track_changes": 1
 }

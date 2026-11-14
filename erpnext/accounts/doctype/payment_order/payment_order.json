@@ -1,7 +1,10 @@
 {
+ "actions": [],
  "autoname": "naming_series:",
  "creation": "2018-07-20 16:43:08.505978",
+ "description": "A batch of payments to send to your bank.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/payment-order",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -106,8 +109,10 @@
    "label": "Account"
   }
  ],
+ "icon": "send",
  "is_submittable": 1,
- "modified": "2020-04-06 18:00:56.022642",
+ "links": [],
+ "modified": "2024-03-27 13:10:10.186727",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Order",
@@ -144,7 +149,8 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

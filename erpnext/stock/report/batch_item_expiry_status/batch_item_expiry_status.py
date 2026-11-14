@@ -2,94 +2,143 @@
 # For license information, please see license.txt
 
 
+from collections import defaultdict
+
 import frappe
 from frappe import _
-from frappe.utils import cint, getdate
+from frappe.core.doctype.user_permission.user_permission import get_user_permissions
+from frappe.permissions import get_allowed_docs_for_doctype
+from frappe.query_builder.functions import IfNull, Sum
+from frappe.utils import date_diff, flt, today
+
+from erpnext.accounts.report.utils import validate_date_range
+from erpnext.stock.doctype.company_restriction.company_restriction import get_allowed_masters_condition
+from erpnext.stock.report.utils import prepare_serial_batch_report
 
 
 def execute(filters=None):
-	if not filters: filters = {}
+	validate_date_range(filters)
 
-	float_precision = cint(frappe.db.get_default("float_precision")) or 3
+	validate_filters(filters)
 
-	columns = get_columns(filters)
-	item_map = get_item_details(filters)
-	iwb_map = get_item_warehouse_batch_map(filters, float_precision)
+	columns = get_columns()
+	data = get_data(filters)
 
-	data = []
-	for item in sorted(iwb_map):
-		for wh in sorted(iwb_map[item]):
-			for batch in sorted(iwb_map[item][wh]):
-				qty_dict = iwb_map[item][wh][batch]
-
-				data.append([item, item_map[item]["item_name"], item_map[item]["description"], wh, batch,
-					frappe.db.get_value('Batch', batch, 'expiry_date'), qty_dict.expiry_status
-				])
+	return prepare_serial_batch_report(columns, data)
 
 
-	return columns, data
+def validate_filters(filters):
+	if not filters:
+		frappe.throw(_("Please select the required filters"))
 
-def get_columns(filters):
-	"""return columns based on filters"""
-
-	columns = [_("Item") + ":Link/Item:100"] + [_("Item Name") + "::150"] + [_("Description") + "::150"] + \
-	[_("Warehouse") + ":Link/Warehouse:100"] + [_("Batch") + ":Link/Batch:100"] + [_("Expires On") + ":Date:90"] + \
-	[_("Expiry (In Days)") + ":Int:120"]
-
-	return columns
-
-def get_conditions(filters):
-	conditions = ""
 	if not filters.get("from_date"):
 		frappe.throw(_("'From Date' is required"))
 
-	if filters.get("to_date"):
-		conditions += " and posting_date <= '%s'" % filters["to_date"]
-	else:
+	if not filters.get("to_date"):
 		frappe.throw(_("'To Date' is required"))
 
-	return conditions
 
-def get_stock_ledger_entries(filters):
-	conditions = get_conditions(filters)
-	return frappe.db.sql("""select item_code, batch_no, warehouse,
-		posting_date, actual_qty
-		from `tabStock Ledger Entry`
-		where docstatus < 2 and ifnull(batch_no, '') != '' %s order by item_code, warehouse""" %
-		conditions, as_dict=1)
+def get_columns():
+	return [
+		_("Item") + ":Link/Item:150",
+		_("Item Name") + "::150",
+		_("Batch") + ":Link/Batch:150",
+		_("Stock UOM") + ":Link/UOM:100",
+		_("Quantity") + ":Float:100",
+		_("Expires On") + ":Date:100",
+		_("Expiry (In Days)") + ":Int:130",
+	]
 
-def get_item_warehouse_batch_map(filters, float_precision):
-	sle = get_stock_ledger_entries(filters)
-	iwb_map = {}
 
-	from_date = getdate(filters["from_date"])
-	to_date = getdate(filters["to_date"])
+def get_data(filters):
+	data = []
 
-	for d in sle:
-		iwb_map.setdefault(d.item_code, {}).setdefault(d.warehouse, {})\
-			.setdefault(d.batch_no, frappe._dict({
-				"expires_on": None, "expiry_status": None}))
+	for batch in get_batch_details(filters):
+		data.append(
+			[
+				batch.item,
+				batch.item_name,
+				batch.name,
+				batch.stock_uom,
+				batch.batch_qty,
+				batch.expiry_date,
+				date_diff(batch.expiry_date, today()) if batch.expiry_date else None,
+			]
+		)
 
-		qty_dict = iwb_map[d.item_code][d.warehouse][d.batch_no]
+	return data
 
-		expiry_date_unicode = frappe.db.get_value('Batch', d.batch_no, 'expiry_date')
-		qty_dict.expires_on = expiry_date_unicode
 
-		exp_date = frappe.utils.data.getdate(expiry_date_unicode)
-		qty_dict.expires_on = exp_date
+def get_batch_details(filters):
+	batch = frappe.qb.DocType("Batch")
+	query = (
+		frappe.qb.from_(batch)
+		.select(
+			batch.name,
+			batch.creation,
+			batch.expiry_date,
+			batch.item,
+			batch.item_name,
+			batch.stock_uom,
+			batch.batch_qty,
+		)
+		.where(
+			(batch.disabled == 0)
+			& (batch.batch_qty > 0)
+			& (batch.expiry_date >= filters["from_date"])
+			& (batch.expiry_date <= filters["to_date"])
+		)
+		.orderby(batch.expiry_date)
+		.orderby(batch.creation)
+	)
 
-		expires_in_days = (exp_date - frappe.utils.datetime.date.today()).days
+	if filters.get("item"):
+		query = query.where(batch.item == filters["item"])
 
-		if expires_in_days > 0:
-			qty_dict.expiry_status = expires_in_days
-		else:
-			qty_dict.expiry_status = 0
+	if condition := get_allowed_masters_condition(batch.item, "Item"):
+		query = query.where(condition)
 
-	return iwb_map
+	batches = query.run(as_dict=True)
+	set_permitted_batch_qty(batches)
 
-def get_item_details(filters):
-	item_map = {}
-	for d in frappe.db.sql("select name, item_name, description from tabItem", as_dict=1):
-		item_map.setdefault(d.name, d)
+	return [batch for batch in batches if flt(batch.batch_qty) > 0]
 
-	return item_map
+
+def set_permitted_batch_qty(batches):
+	warehouses = get_allowed_docs_for_doctype(
+		get_user_permissions().get("Warehouse", []), "Stock Ledger Entry"
+	)
+	if not batches or not warehouses:
+		return
+
+	batch_qty = get_batch_qty_in_warehouses([batch.name for batch in batches], warehouses)
+	for batch in batches:
+		batch.batch_qty = batch_qty.get(batch.name, 0.0)
+
+
+def get_batch_qty_in_warehouses(batch_nos, warehouses):
+	sle = frappe.qb.DocType("Stock Ledger Entry")
+	entry = frappe.qb.DocType("Serial and Batch Entry")
+	condition = (sle.is_cancelled == 0) & (sle.warehouse.isin(warehouses))
+
+	bundle_qty = (
+		frappe.qb.from_(sle)
+		.inner_join(entry)
+		.on(entry.parent == sle.serial_and_batch_bundle)
+		.select(entry.batch_no, Sum(entry.qty))
+		.where(condition & (entry.batch_no.isin(batch_nos)))
+		.groupby(entry.batch_no)
+	).run()
+
+	ledger_qty = (
+		frappe.qb.from_(sle)
+		.select(sle.batch_no, Sum(sle.actual_qty))
+		.where(condition & (sle.batch_no.isin(batch_nos)) & (IfNull(sle.serial_and_batch_bundle, "") == ""))
+		.groupby(sle.batch_no)
+	).run()
+
+	batch_qty = defaultdict(float)
+	for batch_no, qty in [*bundle_qty, *ledger_qty]:
+		batch_qty[batch_no] += flt(qty)
+
+	return batch_qty

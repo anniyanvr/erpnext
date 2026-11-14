@@ -2,9 +2,10 @@
  "actions": [],
  "allow_copy": 1,
  "creation": "2019-02-01 12:24:34.761380",
- "description": "Import Chart of Accounts from a csv file",
+ "description": "Bring in your chart of accounts from a spreadsheet.",
  "doctype": "DocType",
  "document_type": "Other",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/chart-of-accounts-importer",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -47,10 +48,11 @@
   }
  ],
  "hide_toolbar": 1,
+ "icon": "file-input",
  "in_create": 1,
  "issingle": 1,
  "links": [],
- "modified": "2020-02-28 08:49:11.422846",
+ "modified": "2024-03-27 13:06:44.535780",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Chart of Accounts Importer",
@@ -66,6 +68,7 @@
  ],
  "quick_entry": 1,
  "read_only": 1,
- "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
 }

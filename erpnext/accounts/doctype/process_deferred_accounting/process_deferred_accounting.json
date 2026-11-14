@@ -2,7 +2,9 @@
  "actions": [],
  "autoname": "ACC-PDA-.#####",
  "creation": "2019-11-04 18:01:23.454775",
+ "description": "Books deferred revenue or expense for a period.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/process-deferred-accounting",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -74,10 +76,11 @@
    "reqd": 1
   }
  ],
+ "icon": "list-clock",
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2020-09-03 18:07:02.463754",
+ "modified": "2024-03-27 13:10:18.458661",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Process Deferred Accounting",
@@ -125,6 +128,7 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
 }

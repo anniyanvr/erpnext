@@ -14,8 +14,10 @@
   "amount",
   "difference_amount",
   "sec_break1",
-  "remark",
-  "currency"
+  "remarks",
+  "currency",
+  "exchange_rate",
+  "cost_center"
  ],
  "fields": [
   {
@@ -26,7 +28,7 @@
    "read_only": 1
   },
   {
-   "columns": 2,
+   "columns": 4,
    "fieldname": "reference_name",
    "fieldtype": "Dynamic Link",
    "in_list_view": 1,
@@ -60,7 +62,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "columns": 2,
+   "columns": 4,
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -71,12 +73,6 @@
   {
    "fieldname": "sec_break1",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "remark",
-   "fieldtype": "Small Text",
-   "label": "Remark",
-   "read_only": 1
   },
   {
    "fieldname": "currency",
@@ -91,17 +87,37 @@
    "label": "Difference Amount",
    "options": "currency",
    "read_only": 1
+  },
+  {
+   "fieldname": "exchange_rate",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Exchange Rate"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks",
+   "read_only": 1
   }
  ],
+ "is_virtual": 1,
  "istable": 1,
  "links": [],
- "modified": "2021-08-30 10:51:48.140062",
+ "modified": "2026-10-30 18:18:07.872317",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Reconciliation Payment",
  "owner": "Administrator",
  "permissions": [],
  "quick_entry": 1,
- "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
 }

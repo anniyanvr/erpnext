@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "autoname": "hash",
  "creation": "2013-05-22 12:43:10",
  "doctype": "DocType",
@@ -22,10 +23,10 @@
   "received_qty",
   "qty",
   "rejected_qty",
-  "stock_uom",
   "col_break2",
   "uom",
   "conversion_factor",
+  "stock_uom",
   "stock_qty",
   "sec_break1",
   "price_list_rate",
@@ -38,17 +39,22 @@
   "column_break_30",
   "discount_percentage",
   "discount_amount",
+  "distributed_discount_amount",
+  "mapped_additional_discount_amount",
   "base_rate_with_margin",
   "sec_break2",
   "rate",
   "amount",
   "item_tax_template",
+  "tax_withholding_category",
   "col_break4",
   "base_rate",
   "base_amount",
   "pricing_rules",
   "stock_uom_rate",
   "is_free_item",
+  "apply_tds",
+  "allow_zero_valuation_rate",
   "section_break_22",
   "net_rate",
   "net_amount",
@@ -56,25 +62,36 @@
   "base_net_rate",
   "base_net_amount",
   "valuation_rate",
+  "sales_incoming_rate",
   "item_tax_amount",
   "landed_cost_voucher_amount",
   "rm_supp_cost",
   "warehouse_section",
   "warehouse",
+  "add_serial_batch_bundle",
+  "serial_and_batch_bundle",
+  "use_serial_batch_fields",
+  "col_br_wh",
   "from_warehouse",
   "quality_inspection",
-  "serial_no",
-  "col_br_wh",
   "rejected_warehouse",
-  "batch_no",
+  "rejected_serial_and_batch_bundle",
+  "serial_batch_entries_section",
+  "serial_batch_entries_html",
+  "rejected_serial_batch_entries_section",
+  "rejected_serial_batch_entries_html",
+  "section_break_rqbe",
+  "serial_no",
   "rejected_serial_no",
+  "column_break_vbbb",
+  "batch_no",
   "manufacture_details",
   "manufacturer",
   "column_break_13",
   "manufacturer_part_no",
   "accounting",
   "expense_account",
-  "discount_account",
+  "wip_composite_asset",
   "col_break5",
   "is_fixed_asset",
   "asset_location",
@@ -87,9 +104,7 @@
   "service_start_date",
   "service_end_date",
   "reference",
-  "allow_zero_valuation_rate",
   "item_tax_rate",
-  "bom",
   "include_exploded_items",
   "purchase_invoice_item",
   "col_break6",
@@ -98,6 +113,9 @@
   "purchase_receipt",
   "pr_detail",
   "sales_invoice_item",
+  "material_request",
+  "material_request_item",
+  "delivered_by_supplier",
   "item_weight_details",
   "weight_per_unit",
   "total_weight",
@@ -116,6 +134,7 @@
    "columns": 3,
    "fieldname": "item_code",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Item",
    "oldfieldname": "item_code",
@@ -133,7 +152,6 @@
    "fetch_if_empty": 1,
    "fieldname": "item_name",
    "fieldtype": "Data",
-   "in_global_search": 1,
    "label": "Item Name",
    "oldfieldname": "item_name",
    "oldfieldtype": "Data",
@@ -155,6 +173,7 @@
    "width": "300px"
   },
   {
+   "fetch_from": "item_code.image",
    "fieldname": "image",
    "fieldtype": "Attach",
    "hidden": 1,
@@ -175,7 +194,10 @@
   {
    "fieldname": "received_qty",
    "fieldtype": "Float",
-   "label": "Received Qty"
+   "label": "Received Qty",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
   },
   {
    "bold": 1,
@@ -191,9 +213,11 @@
   {
    "fieldname": "rejected_qty",
    "fieldtype": "Float",
-   "label": "Rejected Qty"
+   "label": "Rejected Qty",
+   "print_hide": 1
   },
   {
+   "depends_on": "eval:doc.uom != doc.stock_uom",
    "fieldname": "stock_uom",
    "fieldtype": "Link",
    "label": "Stock UOM",
@@ -210,20 +234,24 @@
    "fieldtype": "Link",
    "label": "UOM",
    "options": "UOM",
+   "print_hide": 1,
    "reqd": 1
   },
   {
+   "depends_on": "eval:doc.uom != doc.stock_uom",
    "fieldname": "conversion_factor",
    "fieldtype": "Float",
    "label": "UOM Conversion Factor",
+   "precision": "9",
    "print_hide": 1,
    "read_only": 1,
    "reqd": 1
   },
   {
+   "depends_on": "eval:doc.uom != doc.stock_uom",
    "fieldname": "stock_qty",
    "fieldtype": "Float",
-   "label": "Stock Qty",
+   "label": "Accepted Qty in Stock UOM",
    "print_hide": 1,
    "read_only": 1,
    "reqd": 1
@@ -243,14 +271,16 @@
    "depends_on": "price_list_rate",
    "fieldname": "discount_percentage",
    "fieldtype": "Percent",
-   "label": "Discount on Price List Rate (%)"
+   "label": "Discount on Price List Rate (%)",
+   "print_hide": 1
   },
   {
    "depends_on": "price_list_rate",
    "fieldname": "discount_amount",
    "fieldtype": "Currency",
    "label": "Discount Amount",
-   "options": "currency"
+   "options": "currency",
+   "print_hide": 1
   },
   {
    "fieldname": "col_break3",
@@ -383,12 +413,14 @@
   {
    "fieldname": "weight_per_unit",
    "fieldtype": "Float",
-   "label": "Weight Per Unit"
+   "label": "Weight Per Unit",
+   "print_hide": 1
   },
   {
    "fieldname": "total_weight",
    "fieldtype": "Float",
    "label": "Total Weight",
+   "print_hide": 1,
    "read_only": 1
   },
   {
@@ -399,9 +431,11 @@
    "fieldname": "weight_uom",
    "fieldtype": "Link",
    "label": "Weight UOM",
-   "options": "UOM"
+   "options": "UOM",
+   "print_hide": 1
   },
   {
+   "depends_on": "eval:parent.update_stock",
    "fieldname": "warehouse_section",
    "fieldtype": "Section Break",
    "label": "Warehouse"
@@ -410,11 +444,13 @@
    "fieldname": "warehouse",
    "fieldtype": "Link",
    "label": "Accepted Warehouse",
-   "options": "Warehouse"
+   "options": "Warehouse",
+   "print_hide": 1
   },
   {
    "fieldname": "rejected_warehouse",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Rejected Warehouse",
    "options": "Warehouse"
   },
@@ -428,26 +464,23 @@
    "print_hide": 1
   },
   {
-   "depends_on": "eval:!doc.is_fixed_asset",
    "fieldname": "batch_no",
    "fieldtype": "Link",
    "label": "Batch No",
-   "no_copy": 1,
-   "options": "Batch"
+   "options": "Batch",
+   "search_index": 1
   },
   {
    "fieldname": "col_br_wh",
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:!doc.is_fixed_asset",
    "fieldname": "serial_no",
    "fieldtype": "Text",
    "label": "Serial No",
    "no_copy": 1
   },
   {
-   "depends_on": "eval:!doc.is_fixed_asset",
    "fieldname": "rejected_serial_no",
    "fieldtype": "Text",
    "label": "Rejected Serial No",
@@ -460,6 +493,7 @@
    "label": "Accounting"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "expense_account",
    "fieldtype": "Link",
    "label": "Expense Head",
@@ -482,13 +516,16 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "project",
    "fieldtype": "Link",
    "label": "Project",
    "options": "Project",
-   "print_hide": 1
+   "print_hide": 1,
+   "search_index": 1
   },
   {
+   "allow_on_submit": 1,
    "default": ":Company",
    "depends_on": "eval:!doc.is_fixed_asset",
    "fieldname": "cost_center",
@@ -554,6 +591,7 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:parent.update_stock",
    "fieldname": "allow_zero_valuation_rate",
    "fieldtype": "Check",
    "label": "Allow Zero Valuation Rate",
@@ -615,14 +653,8 @@
    "search_index": 1
   },
   {
-   "fieldname": "bom",
-   "fieldtype": "Link",
-   "label": "BOM",
-   "options": "BOM"
-  },
-  {
    "default": "0",
-   "depends_on": "eval:parent.is_subcontracted == 'Yes'",
+   "depends_on": "eval:parent.is_subcontracted",
    "fieldname": "include_exploded_items",
    "fieldtype": "Check",
    "label": "Include Exploded Items",
@@ -649,7 +681,8 @@
    "fieldname": "asset_location",
    "fieldtype": "Link",
    "label": "Asset Location",
-   "options": "Location"
+   "options": "Location",
+   "print_hide": 1
   },
   {
    "fieldname": "po_detail",
@@ -724,6 +757,7 @@
    "fieldtype": "Currency",
    "label": "Landed Cost Voucher Amount",
    "no_copy": 1,
+   "options": "Company:company:default_currency",
    "print_hide": 1,
    "read_only": 1
   },
@@ -769,10 +803,11 @@
    "fieldtype": "Link",
    "label": "Asset Category",
    "options": "Asset Category",
+   "print_hide": 1,
    "read_only": 1
   },
   {
-   "depends_on": "eval:parent.is_internal_supplier && parent.update_stock",
+   "depends_on": "eval:parent.is_internal_supplier",
    "fieldname": "from_warehouse",
    "fieldtype": "Link",
    "ignore_user_permissions": 1,
@@ -801,6 +836,7 @@
    "label": "Rate of Stock UOM",
    "no_copy": 1,
    "options": "currency",
+   "print_hide": 1,
    "read_only": 1
   },
   {
@@ -813,6 +849,7 @@
   },
   {
    "collapsible": 1,
+   "collapsible_depends_on": "eval: doc.margin_type || doc.discount_amount || doc.distributed_discount_amount",
    "fieldname": "section_break_26",
    "fieldtype": "Section Break",
    "label": "Discount and Margin"
@@ -838,6 +875,7 @@
    "fieldtype": "Currency",
    "label": "Rate With Margin",
    "options": "currency",
+   "print_hide": 1,
    "read_only": 1
   },
   {
@@ -854,28 +892,168 @@
    "read_only": 1
   },
   {
-   "fieldname": "discount_account",
-   "fieldtype": "Link",
-   "label": "Discount Account",
-   "options": "Account"
-  },
-  {
+   "description": "Product Bundle version this row was packed from",
    "fieldname": "product_bundle",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Product Bundle",
    "options": "Product Bundle",
    "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "apply_tds",
+   "fieldtype": "Check",
+   "label": "Consider for Tax Withholding",
+   "print_hide": 1
+  },
+  {
+   "depends_on": "eval:doc.use_serial_batch_fields === 0 || doc.docstatus === 1",
+   "fieldname": "serial_and_batch_bundle",
+   "fieldtype": "Link",
+   "label": "Serial and Batch Bundle",
+   "no_copy": 1,
+   "options": "Serial and Batch Bundle",
+   "print_hide": 1,
+   "search_index": 1
+  },
+  {
+   "depends_on": "eval:doc.use_serial_batch_fields === 0 || doc.docstatus === 1",
+   "fieldname": "rejected_serial_and_batch_bundle",
+   "fieldtype": "Link",
+   "label": "Rejected Serial and Batch Bundle",
+   "no_copy": 1,
+   "options": "Serial and Batch Bundle",
+   "print_hide": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "wip_composite_asset",
+   "fieldtype": "Link",
+   "label": "WIP Composite Asset",
+   "options": "Asset",
+   "print_hide": 1
+  },
+  {
+   "depends_on": "eval:doc.use_serial_batch_fields === 0 && doc.docstatus === 0",
+   "fieldname": "add_serial_batch_bundle",
+   "fieldtype": "Button",
+   "label": "Add Serial / Batch No"
+  },
+  {
+   "default": "0",
+   "fieldname": "use_serial_batch_fields",
+   "fieldtype": "Check",
+   "label": "Use Serial No / Batch Fields",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "serial_batch_entries_section",
+   "fieldtype": "Section Break",
+   "label": "Serial / Batch Entries"
+  },
+  {
+   "fieldname": "serial_batch_entries_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "rejected_serial_batch_entries_section",
+   "fieldtype": "Section Break",
+   "label": "Rejected Serial / Batch Entries"
+  },
+  {
+   "fieldname": "rejected_serial_batch_entries_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "depends_on": "eval:!doc.is_fixed_asset && doc.use_serial_batch_fields === 1 && parent.update_stock === 1",
+   "fieldname": "section_break_rqbe",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_vbbb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "material_request",
+   "fieldtype": "Link",
+   "label": "Material Request",
+   "no_copy": 1,
+   "options": "Material Request",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "material_request_item",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Material Request Item",
+   "no_copy": 1,
+   "oldfieldname": "pr_detail",
+   "oldfieldtype": "Data",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "Valuation rate for the item as per Sales Invoice (Only for Internal Transfers)",
+   "fieldname": "sales_incoming_rate",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Sales Incoming Rate",
+   "no_copy": 1,
+   "options": "Company:company:default_currency",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "distributed_discount_amount",
+   "fieldtype": "Currency",
+   "label": "Distributed Discount Amount",
+   "options": "currency",
+   "print_hide": 1
+  },
+  {
+   "default": "0",
+   "description": "Tax-exclusive additional discount carried from a source document, per stock unit.",
+   "fieldname": "mapped_additional_discount_amount",
+   "fieldtype": "Currency",
+   "label": "Additional Discount per Stock Unit",
+   "options": "currency",
+   "precision": "9",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_withholding_category",
+   "fieldtype": "Link",
+   "label": "Tax Withholding Category",
+   "options": "Tax Withholding Category",
+   "print_hide": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "delivered_by_supplier",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Delivered by Supplier",
+   "print_hide": 1,
+   "read_only": 1
   }
  ],
+ "grid_page_length": 50,
  "idx": 1,
  "istable": 1,
  "links": [],
- "modified": "2021-09-01 16:04:03.538643",
+ "modified": "2026-10-15 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Purchase Invoice Item",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
- "sort_order": "DESC"
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
 }

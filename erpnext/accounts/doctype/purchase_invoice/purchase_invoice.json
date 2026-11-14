@@ -1,90 +1,84 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "allow_import": 1,
  "autoname": "naming_series:",
  "creation": "2013-05-21 16:16:39",
+ "description": "A bill from a supplier for what you bought.",
  "doctype": "DocType",
  "document_type": "Document",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/purchase-invoice",
+ "email_append_to": 1,
  "engine": "InnoDB",
  "field_order": [
-  "title",
   "naming_series",
   "supplier",
   "supplier_name",
   "tax_id",
-  "due_date",
-  "tax_withholding_category",
-  "column_break1",
   "company",
+  "column_break_6",
   "posting_date",
   "posting_time",
   "set_posting_time",
+  "due_date",
+  "column_break1",
   "is_paid",
   "is_return",
+  "return_against",
+  "update_outstanding_for_self",
+  "update_billed_amount_in_purchase_order",
+  "update_billed_amount_in_purchase_receipt",
   "apply_tds",
   "amended_from",
-  "accounting_dimensions_section",
-  "cost_center",
-  "dimension_col_break",
-  "project",
   "supplier_invoice_details",
   "bill_no",
   "column_break_15",
   "bill_date",
-  "returns",
-  "return_against",
-  "section_addresses",
-  "supplier_address",
-  "address_display",
-  "contact_person",
-  "contact_display",
-  "contact_mobile",
-  "contact_email",
-  "col_break_address",
-  "shipping_address",
-  "shipping_address_display",
-  "billing_address",
-  "billing_address_display",
+  "accounting_dimensions_section",
+  "cost_center",
+  "dimension_col_break",
+  "project",
   "currency_and_price_list",
   "currency",
   "conversion_rate",
+  "use_transaction_date_exchange_rate",
   "column_break2",
   "buying_price_list",
   "price_list_currency",
   "plc_conversion_rate",
   "ignore_pricing_rule",
   "sec_warehouse",
-  "set_warehouse",
-  "rejected_warehouse",
-  "col_break_warehouse",
-  "set_from_warehouse",
-  "supplier_warehouse",
-  "is_subcontracted",
-  "items_section",
-  "update_stock",
   "scan_barcode",
+  "last_scanned_warehouse",
+  "col_break_warehouse",
+  "update_stock",
+  "set_warehouse",
+  "set_from_warehouse",
+  "is_subcontracted",
+  "rejected_warehouse",
+  "supplier_warehouse",
+  "items_section",
   "items",
-  "pricing_rule_details",
-  "pricing_rules",
-  "raw_materials_supplied",
-  "supplied_items",
   "section_break_26",
   "total_qty",
+  "total_net_weight",
+  "column_break_50",
   "base_total",
   "base_net_total",
+  "claimed_landed_cost_amount",
   "column_break_28",
-  "total_net_weight",
   "total",
   "net_total",
   "taxes_section",
   "tax_category",
-  "column_break_49",
-  "shipping_rule",
-  "section_break_51",
   "taxes_and_charges",
+  "column_break_58",
+  "shipping_rule",
+  "column_break_49",
+  "incoterm",
+  "named_place",
+  "section_break_51",
   "taxes",
-  "sec_tax_breakup",
-  "other_charges_calculation",
   "totals",
   "base_taxes_and_charges_added",
   "base_taxes_and_charges_deducted",
@@ -93,43 +87,81 @@
   "taxes_and_charges_added",
   "taxes_and_charges_deducted",
   "total_taxes_and_charges",
+  "totals_section",
+  "use_company_roundoff_cost_center",
+  "grand_total",
+  "in_words",
+  "column_break8",
+  "disable_rounded_total",
+  "rounding_adjustment",
+  "rounded_total",
+  "base_totals_section",
+  "base_grand_total",
+  "base_in_words",
+  "column_break_hcca",
+  "base_rounding_adjustment",
+  "base_rounded_total",
+  "section_break_ttrv",
+  "total_advance",
+  "column_break_peap",
+  "outstanding_amount",
+  "section_tax_withholding_entry",
+  "tax_withholding_group",
+  "ignore_tax_withholding_threshold",
+  "override_tax_withholding_entries",
+  "tax_withholding_entries",
   "section_break_44",
   "apply_discount_on",
   "base_discount_amount",
-  "additional_discount_account",
   "column_break_46",
   "additional_discount_percentage",
   "discount_amount",
-  "section_break_49",
-  "base_grand_total",
-  "base_rounding_adjustment",
-  "base_rounded_total",
-  "base_in_words",
-  "column_break8",
-  "grand_total",
-  "rounding_adjustment",
-  "rounded_total",
-  "in_words",
-  "total_advance",
-  "outstanding_amount",
-  "disable_rounded_total",
+  "sec_tax_breakup",
+  "other_charges_calculation",
+  "item_wise_tax_details",
+  "pricing_rule_details",
+  "pricing_rules",
+  "raw_materials_supplied",
+  "supplied_items",
+  "payments_tab",
   "payments_section",
   "mode_of_payment",
-  "cash_bank_account",
+  "base_paid_amount",
   "clearance_date",
   "col_br_payments",
+  "cash_bank_account",
   "paid_amount",
-  "base_paid_amount",
+  "advances_section",
+  "allocate_advances_automatically",
+  "only_include_allocated_payments",
+  "get_advances",
+  "advances",
   "write_off",
   "write_off_amount",
   "base_write_off_amount",
   "column_break_61",
   "write_off_account",
   "write_off_cost_center",
-  "advances_section",
-  "allocate_advances_automatically",
-  "get_advances",
-  "advances",
+  "address_and_contact_tab",
+  "section_addresses",
+  "supplier_address",
+  "address_display",
+  "col_break_address",
+  "contact_person",
+  "contact_display",
+  "contact_mobile",
+  "contact_email",
+  "company_shipping_address_section",
+  "dispatch_address",
+  "dispatch_address_display",
+  "column_break_126",
+  "shipping_address",
+  "shipping_address_display",
+  "company_billing_address_section",
+  "billing_address",
+  "column_break_130",
+  "billing_address_display",
+  "terms_tab",
   "payment_schedule_section",
   "payment_terms_template",
   "ignore_default_payment_terms_template",
@@ -137,23 +169,11 @@
   "terms_section_break",
   "tc_name",
   "terms",
-  "printing_settings",
-  "letter_head",
-  "select_print_heading",
-  "column_break_112",
-  "group_same_items",
-  "language",
-  "sb_14",
-  "on_hold",
-  "release_date",
-  "cb_17",
-  "hold_comment",
-  "more_info",
+  "more_info_tab",
+  "status_section",
   "status",
-  "inter_company_invoice_reference",
-  "represents_company",
-  "column_break_147",
-  "is_internal_supplier",
+  "column_break_177",
+  "per_received",
   "accounting_details_section",
   "credit_to",
   "party_account_currency",
@@ -161,22 +181,41 @@
   "against_expense_account",
   "column_break_63",
   "unrealized_profit_loss_account",
-  "remarks",
   "subscription_section",
+  "subscription",
+  "column_break_114",
   "from_date",
   "to_date",
-  "column_break_114",
+  "automation_section",
   "auto_repeat",
   "update_auto_repeat_reference",
-  "per_received"
+  "printing_settings",
+  "letter_head",
+  "group_same_items",
+  "column_break_112",
+  "select_print_heading",
+  "language",
+  "sb_14",
+  "on_hold",
+  "release_date",
+  "cb_17",
+  "hold_comment",
+  "additional_info_section",
+  "is_internal_supplier",
+  "title",
+  "represents_company",
+  "supplier_group",
+  "sender",
+  "column_break_147",
+  "inter_company_invoice_reference",
+  "remarks",
+  "connections_tab"
  ],
  "fields": [
   {
    "allow_on_submit": 1,
-   "default": "{supplier_name}",
    "fieldname": "title",
    "fieldtype": "Data",
-   "hidden": 1,
    "label": "Title",
    "no_copy": 1,
    "print_hide": 1
@@ -228,6 +267,8 @@
   {
    "fieldname": "due_date",
    "fieldtype": "Date",
+   "in_import_template": 1,
+   "in_list_view": 1,
    "label": "Due Date",
    "oldfieldname": "due_date",
    "oldfieldtype": "Date"
@@ -251,7 +292,7 @@
    "default": "0",
    "fieldname": "apply_tds",
    "fieldtype": "Check",
-   "label": "Apply Tax Withholding Amount",
+   "label": "Consider for Tax Withholding",
    "print_hide": 1
   },
   {
@@ -270,6 +311,7 @@
    "remember_last_selected_value": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "cost_center",
    "fieldtype": "Link",
    "label": "Cost Center",
@@ -280,7 +322,8 @@
    "fieldname": "posting_date",
    "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Date",
+   "in_standard_filter": 1,
+   "label": "Posting Date",
    "oldfieldname": "posting_date",
    "oldfieldtype": "Date",
    "print_hide": 1,
@@ -288,6 +331,7 @@
    "search_index": 1
   },
   {
+   "default": "Now",
    "fieldname": "posting_time",
    "fieldtype": "Time",
    "label": "Posting Time",
@@ -301,6 +345,7 @@
    "depends_on": "eval:doc.docstatus==0",
    "fieldname": "set_posting_time",
    "fieldtype": "Check",
+   "in_import_template": 1,
    "label": "Edit Posting Date and Time",
    "print_hide": 1
   },
@@ -319,6 +364,7 @@
   {
    "collapsible": 1,
    "collapsible_depends_on": "eval:doc.on_hold",
+   "depends_on": "eval:doc.on_hold",
    "fieldname": "sb_14",
    "fieldtype": "Section Break",
    "label": "Hold Invoice"
@@ -334,7 +380,8 @@
    "description": "Once set, this invoice will be on hold till the set date",
    "fieldname": "release_date",
    "fieldtype": "Date",
-   "label": "Release Date"
+   "label": "Release Date",
+   "search_index": 1
   },
   {
    "fieldname": "cb_17",
@@ -348,18 +395,23 @@
   },
   {
    "collapsible": 1,
-   "collapsible_depends_on": "bill_no",
+   "collapsible_depends_on": "posting_date",
    "fieldname": "supplier_invoice_details",
    "fieldtype": "Section Break",
-   "label": "Supplier Invoice Details"
+   "label": "Supplier Invoice"
   },
   {
    "fieldname": "bill_no",
    "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_import_template": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Supplier Invoice No",
    "oldfieldname": "bill_no",
    "oldfieldtype": "Data",
-   "print_hide": 1
+   "print_hide": 1,
+   "search_index": 1
   },
   {
    "fieldname": "column_break_15",
@@ -368,17 +420,12 @@
   {
    "fieldname": "bill_date",
    "fieldtype": "Date",
+   "in_import_template": 1,
    "label": "Supplier Invoice Date",
    "no_copy": 1,
    "oldfieldname": "bill_date",
    "oldfieldtype": "Date",
    "print_hide": 1
-  },
-  {
-   "depends_on": "return_against",
-   "fieldname": "returns",
-   "fieldtype": "Section Break",
-   "label": "Returns"
   },
   {
    "depends_on": "return_against",
@@ -388,13 +435,27 @@
    "no_copy": 1,
    "options": "Purchase Invoice",
    "print_hide": 1,
-   "read_only": 1
+   "read_only": 1,
+   "search_index": 1
   },
   {
-   "collapsible": 1,
+   "default": "0",
+   "depends_on": "eval: doc.is_return",
+   "fieldname": "update_billed_amount_in_purchase_order",
+   "fieldtype": "Check",
+   "label": "Update Billed Amount in Purchase Order"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: doc.is_return",
+   "fieldname": "update_billed_amount_in_purchase_receipt",
+   "fieldtype": "Check",
+   "label": "Update Billed Amount in Purchase Receipt"
+  },
+  {
    "fieldname": "section_addresses",
    "fieldtype": "Section Break",
-   "label": "Address and Contact"
+   "label": "Supplier Address"
   },
   {
    "fieldname": "supplier_address",
@@ -405,14 +466,13 @@
   },
   {
    "fieldname": "address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Address",
    "read_only": 1
   },
   {
    "fieldname": "contact_person",
    "fieldtype": "Link",
-   "in_global_search": 1,
    "label": "Contact Person",
    "options": "Contact",
    "print_hide": 1
@@ -427,12 +487,14 @@
    "fieldname": "contact_mobile",
    "fieldtype": "Small Text",
    "label": "Mobile No",
+   "options": "Phone",
    "read_only": 1
   },
   {
    "fieldname": "contact_email",
    "fieldtype": "Small Text",
    "label": "Contact Email",
+   "options": "Email",
    "print_hide": 1,
    "read_only": 1
   },
@@ -449,13 +511,14 @@
   },
   {
    "fieldname": "shipping_address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Shipping Address",
    "print_hide": 1,
    "read_only": 1
   },
   {
    "collapsible": 1,
+   "collapsible_depends_on": "eval:doc.currency && doc.currency != erpnext.get_currency(doc.company)",
    "fieldname": "currency_and_price_list",
    "fieldtype": "Section Break",
    "label": "Currency and Price List",
@@ -468,7 +531,8 @@
    "oldfieldname": "currency",
    "oldfieldtype": "Select",
    "options": "Currency",
-   "print_hide": 1
+   "print_hide": 1,
+   "read_only_depends_on": "eval:doc.inter_company_invoice_reference"
   },
   {
    "fieldname": "conversion_rate",
@@ -510,17 +574,17 @@
    "fieldname": "ignore_pricing_rule",
    "fieldtype": "Check",
    "label": "Ignore Pricing Rule",
-   "no_copy": 1,
    "permlevel": 1,
    "print_hide": 1
   },
   {
    "fieldname": "sec_warehouse",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "hide_border": 1,
+   "label": "Items"
   },
   {
    "depends_on": "update_stock",
-   "description": "Sets 'Accepted Warehouse' in each row of the items table.",
    "fieldname": "set_warehouse",
    "fieldtype": "Link",
    "label": "Set Accepted Warehouse",
@@ -529,9 +593,9 @@
   },
   {
    "depends_on": "update_stock",
-   "description": "Warehouse where you are maintaining stock of rejected items",
    "fieldname": "rejected_warehouse",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Rejected Warehouse",
    "no_copy": 1,
    "options": "Warehouse",
@@ -542,25 +606,29 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "No",
+   "default": "0",
    "fieldname": "is_subcontracted",
-   "fieldtype": "Select",
-   "label": "Raw Materials Supplied",
-   "options": "No\nYes",
-   "print_hide": 1
+   "fieldtype": "Check",
+   "label": "Is Subcontracted",
+   "print_hide": 1,
+   "read_only": 1
   },
   {
    "fieldname": "items_section",
    "fieldtype": "Section Break",
+   "hide_border": 1,
    "oldfieldtype": "Section Break",
    "options": "fa fa-shopping-cart"
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.items.every((item) => !item.pr_detail)",
+   "description": "If checked, updates inventory; stock and accounting entries are created together. Leave unchecked if a Purchase Receipt is created separately.",
    "fieldname": "update_stock",
    "fieldtype": "Check",
    "label": "Update Stock",
-   "print_hide": 1
+   "print_hide": 1,
+   "show_description_on_click": 1
   },
   {
    "fieldname": "scan_barcode",
@@ -579,6 +647,7 @@
    "reqd": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "pricing_rule_details",
    "fieldtype": "Section Break",
    "label": "Pricing Rules"
@@ -591,6 +660,7 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
    "collapsible_depends_on": "supplied_items",
    "fieldname": "raw_materials_supplied",
    "fieldtype": "Section Break",
@@ -654,6 +724,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "total_net_weight",
    "fieldname": "total_net_weight",
    "fieldtype": "Float",
    "label": "Total Net Weight",
@@ -663,6 +734,8 @@
   {
    "fieldname": "taxes_section",
    "fieldtype": "Section Break",
+   "hide_border": 1,
+   "label": "Taxes and Charges",
    "oldfieldtype": "Section Break",
    "options": "fa fa-money"
   },
@@ -686,7 +759,8 @@
   },
   {
    "fieldname": "section_break_51",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "hide_border": 1
   },
   {
    "fieldname": "taxes_and_charges",
@@ -713,7 +787,7 @@
   },
   {
    "fieldname": "other_charges_calculation",
-   "fieldtype": "Long Text",
+   "fieldtype": "Text Editor",
    "label": "Taxes and Charges Calculation",
    "no_copy": 1,
    "oldfieldtype": "HTML",
@@ -790,7 +864,6 @@
   },
   {
    "collapsible": 1,
-   "collapsible_depends_on": "discount_amount",
    "fieldname": "section_break_44",
    "fieldtype": "Section Break",
    "label": "Additional Discount"
@@ -829,13 +902,9 @@
    "print_hide": 1
   },
   {
-   "fieldname": "section_break_49",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "base_grand_total",
    "fieldtype": "Currency",
-   "label": "Grand Total (Company Currency)",
+   "label": "Grand Total",
    "oldfieldname": "grand_total",
    "oldfieldtype": "Currency",
    "options": "Company:company:default_currency",
@@ -846,7 +915,7 @@
    "depends_on": "eval:!doc.disable_rounded_total",
    "fieldname": "base_rounding_adjustment",
    "fieldtype": "Currency",
-   "label": "Rounding Adjustment (Company Currency)",
+   "label": "Rounding Adjustment",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "print_hide": 1,
@@ -856,7 +925,7 @@
    "depends_on": "eval:!doc.disable_rounded_total",
    "fieldname": "base_rounded_total",
    "fieldtype": "Currency",
-   "label": "Rounded Total (Company Currency)",
+   "label": "Rounded Total",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "print_hide": 1,
@@ -865,7 +934,7 @@
   {
    "fieldname": "base_in_words",
    "fieldtype": "Data",
-   "label": "In Words (Company Currency)",
+   "label": "In Words",
    "length": 240,
    "oldfieldname": "in_words",
    "oldfieldtype": "Data",
@@ -964,6 +1033,7 @@
    "print_hide": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "cash_bank_account",
    "fieldtype": "Link",
    "label": "Cash/Bank Account",
@@ -1001,8 +1071,6 @@
   },
   {
    "collapsible": 1,
-   "collapsible_depends_on": "write_off_amount",
-   "depends_on": "grand_total",
    "fieldname": "write_off",
    "fieldtype": "Section Break",
    "label": "Write Off"
@@ -1029,6 +1097,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "depends_on": "eval:flt(doc.write_off_amount)!=0",
    "fieldname": "write_off_account",
    "fieldtype": "Link",
@@ -1066,6 +1135,7 @@
    "fieldtype": "Button",
    "label": "Get Advances Paid",
    "oldfieldtype": "Button",
+   "options": "set_advances",
    "print_hide": 1
   },
   {
@@ -1079,19 +1149,20 @@
    "print_hide": 1
   },
   {
-   "collapsible": 1,
    "collapsible_depends_on": "eval:(!doc.is_return)",
    "fieldname": "payment_schedule_section",
    "fieldtype": "Section Break",
    "label": "Payment Terms"
   },
   {
+   "depends_on": "eval:(!doc.is_paid && !doc.is_return)",
    "fieldname": "payment_terms_template",
    "fieldtype": "Link",
    "label": "Payment Terms Template",
    "options": "Payment Terms Template"
   },
   {
+   "depends_on": "eval:(!doc.is_paid && !doc.is_return)",
    "fieldname": "payment_schedule",
    "fieldtype": "Table",
    "label": "Payment Schedule",
@@ -1100,8 +1171,6 @@
    "print_hide": 1
   },
   {
-   "collapsible": 1,
-   "collapsible_depends_on": "terms",
    "fieldname": "terms_section_break",
    "fieldtype": "Section Break",
    "label": "Terms and Conditions",
@@ -1117,13 +1186,13 @@
   {
    "fieldname": "terms",
    "fieldtype": "Text Editor",
-   "label": "Terms and Conditions1"
+   "label": "Terms and Conditions"
   },
   {
    "collapsible": 1,
    "fieldname": "printing_settings",
    "fieldtype": "Section Break",
-   "label": "Printing Settings"
+   "label": "Print Settings"
   },
   {
    "allow_on_submit": 1,
@@ -1165,15 +1234,6 @@
    "read_only": 1
   },
   {
-   "collapsible": 1,
-   "fieldname": "more_info",
-   "fieldtype": "Section Break",
-   "label": "More Information",
-   "oldfieldtype": "Section Break",
-   "options": "fa fa-file-text",
-   "print_hide": 1
-  },
-  {
    "default": "0",
    "fetch_from": "supplier.is_internal_supplier",
    "fieldname": "is_internal_supplier",
@@ -1204,6 +1264,7 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "default": "No",
    "fieldname": "is_opening",
    "fieldtype": "Select",
@@ -1233,6 +1294,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Status",
+   "no_copy": 1,
    "options": "\nDraft\nReturn\nDebit Note Issued\nSubmitted\nPaid\nPartly Paid\nUnpaid\nOverdue\nCancelled\nInternal Transfer",
    "print_hide": 1
   },
@@ -1258,7 +1320,7 @@
    "collapsible": 1,
    "fieldname": "subscription_section",
    "fieldtype": "Section Break",
-   "label": "Subscription Section",
+   "label": "Subscription",
    "print_hide": 1
   },
   {
@@ -1310,14 +1372,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "tax_withholding_category",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Tax Withholding Category",
-   "options": "Tax Withholding Category",
-   "print_hide": 1
-  },
-  {
    "fieldname": "billing_address",
    "fieldtype": "Link",
    "label": "Select Billing Address",
@@ -1325,19 +1379,21 @@
   },
   {
    "fieldname": "billing_address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Billing Address",
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "project",
    "fieldtype": "Link",
    "label": "Project",
    "options": "Project"
   },
   {
+   "allow_on_submit": 1,
    "depends_on": "eval:doc.is_internal_supplier",
-   "description": "Unrealized Profit / Loss account for intra-company transfers",
+   "description": "Unrealized Profit/Loss account for intra-company transfers",
    "fieldname": "unrealized_profit_loss_account",
    "fieldtype": "Link",
    "label": "Unrealized Profit / Loss Account",
@@ -1349,14 +1405,16 @@
    "fetch_from": "supplier.represents_company",
    "fieldname": "represents_company",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Represents Company",
-   "options": "Company"
+   "options": "Company",
+   "read_only": 1
   },
   {
    "depends_on": "eval:doc.update_stock && doc.is_internal_supplier",
-   "description": "Sets 'From Warehouse' in each row of the items table.",
    "fieldname": "set_from_warehouse",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Set From Warehouse",
    "no_copy": 1,
    "options": "Warehouse",
@@ -1365,9 +1423,10 @@
    "width": "50px"
   },
   {
-   "depends_on": "eval:doc.update_stock && doc.is_subcontracted==\"Yes\"",
+   "depends_on": "eval:doc.is_subcontracted",
    "fieldname": "supplier_warehouse",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Supplier Warehouse",
    "no_copy": 1,
    "options": "Warehouse",
@@ -1383,12 +1442,6 @@
    "no_copy": 1,
    "print_hide": 1,
    "read_only": 1
-  },
-  {
-   "fieldname": "additional_discount_account",
-   "fieldtype": "Link",
-   "label": "Additional Discount Account",
-   "options": "Account"
   },
   {
    "default": "0",
@@ -1408,17 +1461,253 @@
   {
    "fieldname": "column_break_147",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "subscription",
+   "fieldtype": "Link",
+   "label": "Subscription",
+   "options": "Subscription"
+  },
+  {
+   "fieldname": "payments_tab",
+   "fieldtype": "Tab Break",
+   "label": "Payments"
+  },
+  {
+   "fieldname": "address_and_contact_tab",
+   "fieldtype": "Tab Break",
+   "label": "Address & Contact"
+  },
+  {
+   "fieldname": "terms_tab",
+   "fieldtype": "Tab Break",
+   "label": "Terms"
+  },
+  {
+   "fieldname": "more_info_tab",
+   "fieldtype": "Tab Break",
+   "label": "More Info"
+  },
+  {
+   "fieldname": "connections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connections",
+   "show_dashboard": 1
+  },
+  {
+   "fieldname": "column_break_6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_50",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_58",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company_shipping_address_section",
+   "fieldtype": "Section Break",
+   "label": "Shipping Address"
+  },
+  {
+   "fieldname": "column_break_126",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company_billing_address_section",
+   "fieldtype": "Section Break",
+   "label": "Company Billing Address"
+  },
+  {
+   "fieldname": "column_break_130",
+   "fieldtype": "Column Break"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "fieldname": "column_break_177",
+   "fieldtype": "Column Break"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "additional_info_section",
+   "fieldtype": "Section Break",
+   "label": "Additional Info",
+   "oldfieldtype": "Section Break",
+   "options": "fa fa-file-text",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "incoterm",
+   "fieldtype": "Link",
+   "label": "Incoterm",
+   "options": "Incoterm"
+  },
+  {
+   "depends_on": "incoterm",
+   "fieldname": "named_place",
+   "fieldtype": "Data",
+   "label": "Named Place"
+  },
+  {
+   "default": "0",
+   "depends_on": "allocate_advances_automatically",
+   "description": "Advance payments allocated against orders will only be fetched",
+   "fieldname": "only_include_allocated_payments",
+   "fieldtype": "Check",
+   "label": "Only Include Allocated Payments"
+  },
+  {
+   "default": "0",
+   "fieldname": "use_company_roundoff_cost_center",
+   "fieldtype": "Check",
+   "label": "Use Company Default Round Off Cost Center"
+  },
+  {
+   "default": "0",
+   "fieldname": "use_transaction_date_exchange_rate",
+   "fieldtype": "Check",
+   "label": "Use Transaction Date Exchange Rate",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fetch_from": "supplier.supplier_group",
+   "fieldname": "supplier_group",
+   "fieldtype": "Link",
+   "label": "Supplier Group",
+   "options": "Supplier Group"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: doc.is_return && doc.return_against",
+   "description": "Debit Note will update it's own outstanding amount, even if 'Return Against' is specified.",
+   "fieldname": "update_outstanding_for_self",
+   "fieldtype": "Check",
+   "label": "Update Outstanding for Self"
+  },
+  {
+   "fieldname": "sender",
+   "fieldtype": "Data",
+   "label": "Sender",
+   "options": "Email"
+  },
+  {
+   "fieldname": "dispatch_address_display",
+   "fieldtype": "Text Editor",
+   "label": "Dispatch Address",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "dispatch_address",
+   "fieldtype": "Link",
+   "label": "Select Dispatch Address ",
+   "options": "Address",
+   "print_hide": 1
+  },
+  {
+   "depends_on": "eval: doc.last_scanned_warehouse",
+   "fieldname": "last_scanned_warehouse",
+   "fieldtype": "Data",
+   "is_virtual": 1,
+   "label": "Last Scanned Warehouse"
+  },
+  {
+   "fieldname": "claimed_landed_cost_amount",
+   "fieldtype": "Currency",
+   "label": "Claimed Landed Cost Amount (Company Currency)",
+   "no_copy": 1,
+   "options": "Company:company:default_currency",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "item_wise_tax_details",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Item Wise Tax Details",
+   "no_copy": 1,
+   "options": "Item Wise Tax Detail"
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval: doc.apply_tds && doc.docstatus == 0",
+   "depends_on": "eval: doc.apply_tds",
+   "fieldname": "section_tax_withholding_entry",
+   "fieldtype": "Section Break",
+   "label": "Tax Withholding Entry"
+  },
+  {
+   "fieldname": "tax_withholding_group",
+   "fieldtype": "Link",
+   "label": "Tax Withholding Group",
+   "options": "Tax Withholding Group",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "tax_withholding_entries",
+   "fieldtype": "Table",
+   "label": "Tax Withholding Entries",
+   "options": "Tax Withholding Entry",
+   "read_only_depends_on": "eval: !doc.override_tax_withholding_entries"
+  },
+  {
+   "default": "0",
+   "fieldname": "ignore_tax_withholding_threshold",
+   "fieldtype": "Check",
+   "label": "Ignore Tax Withholding Threshold"
+  },
+  {
+   "default": "0",
+   "fieldname": "override_tax_withholding_entries",
+   "fieldtype": "Check",
+   "label": "Edit Tax Withholding Entries"
+  },
+  {
+   "fieldname": "column_break_hcca",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_ttrv",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_peap",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "base_totals_section",
+   "fieldtype": "Section Break",
+   "label": "Totals (Company Currency)"
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Totals"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "automation_section",
+   "fieldtype": "Section Break",
+   "label": "Automation"
   }
  ],
- "icon": "fa fa-file-text",
+ "grid_page_length": 50,
+ "icon": "receipt-text",
  "idx": 204,
  "is_submittable": 1,
  "links": [],
- "modified": "2021-10-12 20:55:16.145651",
+ "modified": "2026-10-12 18:16:58.531757",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Purchase Invoice",
- "name_case": "Title Case",
  "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
@@ -1468,13 +1757,28 @@
    "read": 1,
    "role": "Accounts Manager",
    "write": 1
+  },
+  {
+   "role": "Manufacturing Manager",
+   "select": 1
+  },
+  {
+   "role": "Quality Manager",
+   "select": 1
+  },
+  {
+   "role": "Stock Manager",
+   "select": 1
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "posting_date, supplier, bill_no, base_grand_total, outstanding_amount",
+ "sender_field": "sender",
  "show_name_in_global_search": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "timeline_field": "supplier",
- "title_field": "title",
+ "title_field": "supplier_name",
  "track_changes": 1
 }

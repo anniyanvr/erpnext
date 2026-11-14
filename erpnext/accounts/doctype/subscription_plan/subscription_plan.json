@@ -3,7 +3,9 @@
  "allow_rename": 1,
  "autoname": "field:plan_name",
  "creation": "2018-02-24 11:31:23.066506",
+ "description": "What a subscription bills for, and at what price.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/subscription-plan",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -41,7 +43,8 @@
    "fieldname": "currency",
    "fieldtype": "Link",
    "label": "Currency",
-   "options": "Currency"
+   "options": "Currency",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_3",
@@ -75,7 +78,8 @@
    "fieldname": "cost",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Cost"
+   "label": "Cost",
+   "options": "currency"
   },
   {
    "depends_on": "eval:doc.price_determination==\"Based On Price List\"",
@@ -146,11 +150,13 @@
    "label": "Product Price ID"
   }
  ],
+ "icon": "calendar-sync",
  "links": [],
- "modified": "2021-08-13 10:53:44.205774",
+ "modified": "2024-03-27 13:10:47.998597",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Subscription Plan",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -190,7 +196,8 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

@@ -5,73 +5,111 @@
  "allow_rename": 1,
  "autoname": "naming_series:",
  "creation": "2013-01-10 16:34:11",
- "description": "Supplier of Goods or Services.",
+ "description": "A company or person you buy goods or services from.",
  "doctype": "DocType",
  "document_type": "Setup",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/supplier",
  "engine": "InnoDB",
  "field_order": [
-  "basic_info",
+  "overview_tab",
+  "overview_html",
+  "details_tab",
   "naming_series",
   "supplier_name",
-  "country",
-  "default_bank_account",
-  "tax_id",
-  "tax_category",
-  "tax_withholding_category",
-  "is_transporter",
-  "is_internal_supplier",
-  "represents_company",
-  "image",
+  "alias",
+  "supplier_type",
+  "gender",
   "column_break0",
   "supplier_group",
-  "supplier_type",
-  "allow_purchase_invoice_creation_without_purchase_order",
-  "allow_purchase_invoice_creation_without_purchase_receipt",
-  "disabled",
-  "warn_rfqs",
-  "warn_pos",
-  "prevent_rfqs",
-  "prevent_pos",
-  "allowed_to_transact_section",
-  "companies",
-  "section_break_7",
+  "country",
+  "image",
+  "defaults_section",
   "default_currency",
+  "default_bank_account",
   "column_break_10",
   "default_price_list",
-  "section_credit_limit",
   "payment_terms",
-  "cb_21",
-  "on_hold",
-  "hold_type",
-  "release_date",
+  "contact_and_address_tab",
   "address_contacts",
   "address_html",
   "column_break1",
   "contact_html",
   "primary_address_and_contact_detail_section",
+  "supplier_primary_address",
+  "primary_address",
+  "column_break_mglr",
   "supplier_primary_contact",
   "mobile_no",
   "email_id",
-  "column_break_44",
-  "supplier_primary_address",
-  "primary_address",
-  "default_payable_accounts",
+  "accounting_tab",
+  "default_accounts_section",
   "accounts",
-  "default_tax_withholding_config",
+  "internal_supplier_section",
+  "is_internal_supplier",
+  "represents_company",
+  "column_break_16",
+  "section_break_pgad",
+  "companies",
+  "tax_tab",
+  "taxation_section",
+  "tax_id",
+  "tax_category",
+  "column_break_27",
+  "tax_withholding_category",
+  "tax_withholding_group",
+  "items_tab",
+  "frequently_bought_html",
+  "party_specific_items_section",
+  "party_specific_items_html",
+  "settings_tab",
+  "company_restrictions_section",
+  "restrict_to_companies",
+  "allowed_companies",
+  "invoice_settings_section",
+  "is_transporter",
+  "allow_purchase_invoice_creation_without_purchase_order",
+  "allow_purchase_invoice_creation_without_purchase_receipt",
+  "column_break_54",
+  "disabled",
+  "is_frozen",
+  "block_supplier_section",
+  "on_hold",
+  "hold_type",
+  "release_date",
+  "rfq_and_purchase_order_settings_section",
+  "warn_rfqs",
+  "prevent_rfqs",
+  "column_break_oxjw",
+  "warn_pos",
+  "prevent_pos",
+  "portal_users_tab",
+  "portal_users",
+  "more_info_tab",
   "column_break2",
   "website",
-  "supplier_details",
-  "column_break_30",
   "language",
-  "is_frozen"
+  "column_break_30",
+  "supplier_details",
+  "section_break_jqla",
+  "customer_numbers",
+  "dashboard_tab"
  ],
  "fields": [
   {
-   "fieldname": "basic_info",
-   "fieldtype": "Section Break",
-   "label": "Name and Type",
-   "oldfieldtype": "Section Break",
-   "options": "fa fa-user"
+   "depends_on": "eval: !doc.__islocal",
+   "fieldname": "overview_tab",
+   "fieldtype": "Tab Break",
+   "label": "Overview"
+  },
+  {
+   "fieldname": "overview_html",
+   "fieldtype": "HTML",
+   "label": "Overview HTML"
+  },
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
   },
   {
    "fieldname": "naming_series",
@@ -97,51 +135,64 @@
   {
    "fieldname": "country",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "label": "Country",
    "options": "Country"
   },
   {
    "fieldname": "default_bank_account",
    "fieldtype": "Link",
-   "label": "Default Company Bank Account",
+   "label": "Company Bank Account",
    "options": "Bank Account"
   },
   {
+   "description": "Supplier's tax identification number (e.g. PAN, VAT, GST)",
    "fieldname": "tax_id",
    "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_import_template": 1,
    "label": "Tax ID"
   },
   {
+   "description": "Determines which tax rules apply to this supplier",
    "fieldname": "tax_category",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "label": "Tax Category",
    "options": "Tax Category"
   },
   {
+   "description": "TDS / withholding tax category applied when paying this supplier",
    "fieldname": "tax_withholding_category",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "label": "Tax Withholding Category",
    "options": "Tax Withholding Category"
   },
   {
    "default": "0",
+   "description": "Enable to make this supplier selectable as a transporter on Delivery Notes and Stock Entries",
    "fieldname": "is_transporter",
    "fieldtype": "Check",
    "label": "Is Transporter"
   },
   {
    "default": "0",
+   "description": "Used for inter-company transactions",
    "fieldname": "is_internal_supplier",
    "fieldtype": "Check",
-   "label": "Is Internal Supplier"
+   "label": "Is Internal Supplier",
+   "show_description_on_click": 1
   },
   {
    "depends_on": "is_internal_supplier",
+   "description": "Select the related company that this Supplier represents for inter-company transactions.",
    "fieldname": "represents_company",
    "fieldtype": "Link",
    "ignore_user_permissions": 1,
    "label": "Represents Company",
-   "options": "Company"
+   "options": "Company",
+   "show_description_on_click": 1
   },
   {
    "fieldname": "image",
@@ -159,20 +210,22 @@
   {
    "fieldname": "supplier_group",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Supplier Group",
+   "link_filters": "[[\"Supplier Group\",\"is_group\",\"=\",0]]",
    "oldfieldname": "supplier_type",
    "oldfieldtype": "Link",
-   "options": "Supplier Group",
-   "reqd": 1
+   "options": "Supplier Group"
   },
   {
    "default": "Company",
    "fieldname": "supplier_type",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Supplier Type",
-   "options": "Company\nIndividual",
+   "options": "Company\nIndividual\nPartnership",
    "reqd": 1
   },
   {
@@ -184,6 +237,7 @@
   {
    "bold": 1,
    "default": "0",
+   "description": "Disabled suppliers are hidden from selection in new transactions but remain in historical records",
    "fieldname": "disabled",
    "fieldtype": "Check",
    "label": "Disabled"
@@ -192,6 +246,7 @@
    "default": "0",
    "fieldname": "warn_rfqs",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Warn RFQs",
    "read_only": 1
   },
@@ -199,6 +254,7 @@
    "default": "0",
    "fieldname": "warn_pos",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Warn POs",
    "read_only": 1
   },
@@ -206,6 +262,7 @@
    "default": "0",
    "fieldname": "prevent_rfqs",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Prevent RFQs",
    "read_only": 1
   },
@@ -213,32 +270,23 @@
    "default": "0",
    "fieldname": "prevent_pos",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Prevent POs",
    "read_only": 1
   },
   {
    "depends_on": "represents_company",
-   "fieldname": "allowed_to_transact_section",
-   "fieldtype": "Section Break",
-   "label": "Allowed To Transact With"
-  },
-  {
-   "depends_on": "represents_company",
    "fieldname": "companies",
    "fieldtype": "Table",
-   "label": "Allowed To Transact With",
+   "label": "Allowed to transact with",
    "options": "Allowed To Transact With"
-  },
-  {
-   "collapsible": 1,
-   "fieldname": "section_break_7",
-   "fieldtype": "Section Break",
-   "label": "Currency and Price List"
   },
   {
    "fieldname": "default_currency",
    "fieldtype": "Link",
    "ignore_user_permissions": 1,
+   "in_import_template": 1,
+   "in_list_view": 1,
    "label": "Billing Currency",
    "no_copy": 1,
    "options": "Currency"
@@ -251,37 +299,32 @@
    "fieldname": "default_price_list",
    "fieldtype": "Link",
    "ignore_user_permissions": 1,
+   "in_import_template": 1,
    "label": "Price List",
    "options": "Price List"
   },
   {
-   "collapsible": 1,
-   "fieldname": "section_credit_limit",
-   "fieldtype": "Section Break",
-   "label": "Credit Limit"
-  },
-  {
    "fieldname": "payment_terms",
    "fieldtype": "Link",
-   "label": "Default Payment Terms Template",
+   "in_import_template": 1,
+   "label": "Payment Terms Template",
    "options": "Payment Terms Template"
   },
   {
-   "fieldname": "cb_21",
-   "fieldtype": "Column Break"
-  },
-  {
    "default": "0",
+   "description": "When enabled, transactions with this supplier will be blocked based on the Hold Type below",
    "fieldname": "on_hold",
    "fieldtype": "Check",
-   "label": "Block Supplier"
+   "label": "Block Supplier",
+   "show_description_on_click": 1
   },
   {
+   "default": "All",
    "depends_on": "eval:doc.on_hold",
    "fieldname": "hold_type",
    "fieldtype": "Select",
    "label": "Hold Type",
-   "options": "\nAll\nInvoices\nPayments"
+   "options": "All\nInvoices\nPayments"
   },
   {
    "depends_on": "eval:doc.on_hold",
@@ -316,27 +359,13 @@
    "read_only": 1
   },
   {
-   "collapsible": 1,
-   "collapsible_depends_on": "accounts",
-   "fieldname": "default_payable_accounts",
-   "fieldtype": "Section Break",
-   "label": "Default Payable Accounts"
-  },
-  {
-   "description": "Mention if non-standard payable account",
+   "description": "Override the default payable / advance accounts on a per-company basis. Leave blank to use each company's defaults from Company settings.",
    "fieldname": "accounts",
    "fieldtype": "Table",
-   "label": "Accounts",
+   "label": "Per-Company Accounts",
    "options": "Party Account"
   },
   {
-   "collapsible": 1,
-   "fieldname": "default_tax_withholding_config",
-   "fieldtype": "Section Break",
-   "label": "Default Tax Withholding Config"
-  },
-  {
-   "collapsible": 1,
    "collapsible_depends_on": "supplier_details",
    "fieldname": "column_break2",
    "fieldtype": "Section Break",
@@ -351,7 +380,7 @@
    "oldfieldtype": "Data"
   },
   {
-   "description": "Statutory info and other general information about your Supplier",
+   "description": "General information about your Supplier",
    "fieldname": "supplier_details",
    "fieldtype": "Text",
    "label": "Supplier Details",
@@ -364,6 +393,7 @@
   },
   {
    "default": "0",
+   "description": "Frozen suppliers block new transactions and ledger entries until unfrozen. Only users with the role set in Company's \"Roles Allowed to Set and Edit Frozen Account Entries\" can transact.",
    "fieldname": "is_frozen",
    "fieldtype": "Check",
    "label": "Is Frozen"
@@ -372,57 +402,247 @@
    "default": "0",
    "fieldname": "allow_purchase_invoice_creation_without_purchase_order",
    "fieldtype": "Check",
-   "label": "Allow Purchase Invoice Creation Without Purchase Order"
+   "label": "Allow purchase invoice creation without purchase order"
   },
   {
    "default": "0",
    "fieldname": "allow_purchase_invoice_creation_without_purchase_receipt",
    "fieldtype": "Check",
-   "label": "Allow Purchase Invoice Creation Without Purchase Receipt"
+   "label": "Allow purchase invoice creation without purchase receipt"
   },
   {
    "fieldname": "primary_address_and_contact_detail_section",
    "fieldtype": "Section Break",
-   "label": "Primary Address and Contact Detail"
+   "label": "Primary Address and Contact"
   },
   {
    "description": "Reselect, if the chosen contact is edited after save",
    "fieldname": "supplier_primary_contact",
    "fieldtype": "Link",
-   "label": "Supplier Primary Contact",
-   "options": "Contact"
+   "hidden": 1,
+   "label": "Primary Contact",
+   "no_copy": 1,
+   "options": "Contact",
+   "show_on_timeline": 1
   },
   {
    "fetch_from": "supplier_primary_contact.mobile_no",
    "fieldname": "mobile_no",
    "fieldtype": "Read Only",
-   "label": "Mobile No"
+   "hidden": 1,
+   "in_global_search": 1,
+   "label": "Mobile No",
+   "no_copy": 1
   },
   {
    "fetch_from": "supplier_primary_contact.email_id",
    "fieldname": "email_id",
    "fieldtype": "Read Only",
-   "label": "Email Id"
-  },
-  {
-   "fieldname": "column_break_44",
-   "fieldtype": "Column Break"
+   "hidden": 1,
+   "in_global_search": 1,
+   "label": "Email ID",
+   "no_copy": 1
   },
   {
    "fieldname": "primary_address",
-   "fieldtype": "Text",
-   "label": "Primary Address",
+   "fieldtype": "Text Editor",
+   "hidden": 1,
+   "label": "Primary Address Preview",
+   "no_copy": 1,
    "read_only": 1
   },
   {
    "description": "Reselect, if the chosen address is edited after save",
    "fieldname": "supplier_primary_address",
    "fieldtype": "Link",
-   "label": "Supplier Primary Address",
-   "options": "Address"
+   "hidden": 1,
+   "label": "Primary Address",
+   "no_copy": 1,
+   "options": "Address",
+   "show_on_timeline": 1
+  },
+  {
+   "fieldname": "dashboard_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connections",
+   "show_dashboard": 1
+  },
+  {
+   "depends_on": "eval:!doc.__islocal",
+   "fieldname": "items_tab",
+   "fieldtype": "Tab Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "frequently_bought_html",
+   "fieldtype": "HTML",
+   "label": "Frequently Bought HTML"
+  },
+  {
+   "fieldname": "party_specific_items_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "party_specific_items_html",
+   "fieldtype": "HTML",
+   "label": "Party Specific Items HTML"
+  },
+  {
+   "fieldname": "settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "Settings"
+  },
+  {
+   "fieldname": "company_restrictions_section",
+   "fieldtype": "Section Break",
+   "label": "Company Restrictions",
+   "permlevel": 1
+  },
+  {
+   "default": "0",
+   "description": "If checked, this Supplier is only available for transactions in the companies listed below.",
+   "fieldname": "restrict_to_companies",
+   "fieldtype": "Check",
+   "label": "Restrict to Companies",
+   "permlevel": 1
+  },
+  {
+   "depends_on": "eval:doc.restrict_to_companies",
+   "fieldname": "allowed_companies",
+   "fieldtype": "Table MultiSelect",
+   "label": "Allowed Companies",
+   "mandatory_depends_on": "eval:doc.restrict_to_companies",
+   "options": "Company Restriction",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "contact_and_address_tab",
+   "fieldtype": "Tab Break",
+   "label": "Address & Contact"
+  },
+  {
+   "fieldname": "accounting_tab",
+   "fieldtype": "Tab Break",
+   "label": "Accounting"
+  },
+  {
+   "fieldname": "defaults_section",
+   "fieldtype": "Section Break",
+   "label": "Defaults"
+  },
+  {
+   "fieldname": "tax_tab",
+   "fieldtype": "Tab Break",
+   "label": "Tax"
+  },
+  {
+   "collapsible_depends_on": "is_internal_supplier",
+   "fieldname": "internal_supplier_section",
+   "fieldtype": "Section Break",
+   "hide_border": 1,
+   "label": "Internal Supplier Details"
+  },
+  {
+   "fieldname": "column_break_16",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_27",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_54",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "block_supplier_section",
+   "fieldtype": "Section Break",
+   "label": "Block Supplier"
+  },
+  {
+   "fieldname": "default_accounts_section",
+   "fieldtype": "Section Break",
+   "label": "Default Accounts"
+  },
+  {
+   "fieldname": "portal_users_tab",
+   "fieldtype": "Tab Break",
+   "label": "Portal Users"
+  },
+  {
+   "fieldname": "portal_users",
+   "fieldtype": "Table",
+   "label": "Supplier Portal Users",
+   "options": "Portal User"
+  },
+  {
+   "fieldname": "column_break_mglr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Account / customer numbers assigned to your companies by this supplier (for reconciliation on their statements)",
+   "fieldname": "customer_numbers",
+   "fieldtype": "Table",
+   "label": "Customer Numbers",
+   "options": "Customer Number At Supplier"
+  },
+  {
+   "description": "Used to pick the correct rate row inside the Tax Withholding Category for this supplier (e.g. Company vs Individual rates)",
+   "fieldname": "tax_withholding_group",
+   "fieldtype": "Link",
+   "label": "Tax Withholding Group",
+   "options": "Tax Withholding Group"
+  },
+  {
+   "depends_on": "eval:doc.supplier_type == 'Individual'",
+   "fieldname": "gender",
+   "fieldtype": "Link",
+   "label": "Gender",
+   "options": "Gender"
+  },
+  {
+   "fieldname": "rfq_and_purchase_order_settings_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "RFQ and Purchase Order Settings"
+  },
+  {
+   "fieldname": "column_break_oxjw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "taxation_section",
+   "fieldtype": "Section Break",
+   "label": "Tax Identification"
+  },
+  {
+   "fieldname": "invoice_settings_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "more_info_tab",
+   "fieldtype": "Tab Break",
+   "label": "More Info"
+  },
+  {
+   "fieldname": "section_break_jqla",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_pgad",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "alias",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "Alias",
+   "no_copy": 1,
+   "unique": 1
   }
  ],
- "icon": "fa fa-user",
+ "grid_page_length": 50,
+ "icon": "truck",
  "idx": 370,
  "image_field": "image",
  "links": [
@@ -432,11 +652,10 @@
    "link_fieldname": "party"
   }
  ],
- "modified": "2021-10-20 22:03:33.147249",
+ "modified": "2026-10-22 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Supplier",
- "name_case": "Title Case",
  "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
@@ -465,7 +684,6 @@
    "read": 1,
    "report": 1,
    "role": "Purchase Master Manager",
-   "set_user_permissions": 1,
    "share": 1,
    "write": 1
   },
@@ -490,13 +708,45 @@
    "read": 1,
    "report": 1,
    "role": "Accounts Manager"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Purchase Master Manager",
+   "write": 1
+  },
+  {
+   "role": "Delivery Manager",
+   "select": 1
+  },
+  {
+   "role": "Delivery User",
+   "select": 1
+  },
+  {
+   "role": "Maintenance User",
+   "select": 1
+  },
+  {
+   "role": "Quality Manager",
+   "select": 1
+  },
+  {
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "role": "Website Manager",
+   "select": 1
   }
  ],
  "quick_entry": 1,
- "search_fields": "supplier_name, supplier_group",
+ "row_format": "Dynamic",
+ "search_fields": "supplier_group, alias",
  "show_name_in_global_search": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "ASC",
+ "states": [],
  "title_field": "supplier_name",
  "track_changes": 1
 }

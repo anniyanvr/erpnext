@@ -3,16 +3,21 @@
  "allow_import": 1,
  "autoname": "naming_series:",
  "creation": "2018-10-22 18:19:02.784533",
+ "description": "A line from your bank statement, ready to be matched with a payment.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/bank-transaction",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "naming_series",
   "date",
+  "is_rule_evaluated",
+  "matched_transaction_rule",
   "column_break_2",
   "status",
   "bank_account",
   "company",
+  "amended_from",
   "section_break_4",
   "deposit",
   "withdrawal",
@@ -20,25 +25,33 @@
   "currency",
   "section_break_10",
   "description",
-  "section_break_14",
   "reference_number",
+  "column_break_10",
   "transaction_id",
+  "transaction_type",
+  "section_break_14",
+  "column_break_oufv",
   "payment_entries",
   "section_break_18",
   "allocated_amount",
-  "amended_from",
   "column_break_17",
   "unallocated_amount",
   "party_section",
   "party_type",
-  "party"
+  "party",
+  "column_break_3czf",
+  "bank_party_name",
+  "bank_party_account_number",
+  "bank_party_iban",
+  "extended_bank_statement_section",
+  "included_fee",
+  "excluded_fee"
  ],
  "fields": [
   {
    "default": "ACC-BTN-.YYYY.-",
    "fieldname": "naming_series",
    "fieldtype": "Select",
-   "hidden": 1,
    "label": "Series",
    "no_copy": 1,
    "options": "ACC-BTN-.YYYY.-",
@@ -61,7 +74,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "\nPending\nSettled\nUnreconciled\nReconciled"
+   "options": "\nPending\nSettled\nUnreconciled\nReconciled\nCancelled"
   },
   {
    "fieldname": "bank_account",
@@ -110,15 +123,14 @@
   {
    "allow_on_submit": 1,
    "fieldname": "reference_number",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Reference Number"
   },
   {
    "fieldname": "transaction_id",
    "fieldtype": "Data",
    "label": "Transaction ID",
-   "read_only": 1,
-   "unique": 1
+   "read_only": 1
   },
   {
    "allow_on_submit": 1,
@@ -132,9 +144,12 @@
    "fieldtype": "Section Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "allocated_amount",
    "fieldtype": "Currency",
-   "label": "Allocated Amount"
+   "label": "Allocated Amount",
+   "options": "currency",
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",
@@ -150,9 +165,12 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "unallocated_amount",
    "fieldtype": "Currency",
-   "label": "Unallocated Amount"
+   "label": "Unallocated Amount",
+   "options": "currency",
+   "read_only": 1
   },
   {
    "fieldname": "party_section",
@@ -188,14 +206,87 @@
    "label": "Withdrawal",
    "oldfieldname": "credit",
    "options": "currency"
+  },
+  {
+   "fieldname": "column_break_10",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "transaction_type",
+   "fieldtype": "Data",
+   "label": "Transaction Type",
+   "length": 50
+  },
+  {
+   "fieldname": "column_break_3czf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bank_party_name",
+   "fieldtype": "Data",
+   "label": "Party Name/Account Holder (Bank Statement)"
+  },
+  {
+   "fieldname": "bank_party_iban",
+   "fieldtype": "Data",
+   "label": "Party IBAN (Bank Statement)",
+   "options": "IBAN"
+  },
+  {
+   "fieldname": "bank_party_account_number",
+   "fieldtype": "Data",
+   "label": "Party Account No. (Bank Statement)"
+  },
+  {
+   "fieldname": "column_break_oufv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "extended_bank_statement_section",
+   "fieldtype": "Section Break",
+   "label": "Extended Bank Statement"
+  },
+  {
+   "fieldname": "included_fee",
+   "fieldtype": "Currency",
+   "label": "Included Fee",
+   "non_negative": 1,
+   "options": "currency"
+  },
+  {
+   "description": "On save, the Excluded Fee will be converted to an Included Fee.",
+   "fieldname": "excluded_fee",
+   "fieldtype": "Currency",
+   "label": "Excluded Fee",
+   "non_negative": 1,
+   "options": "currency"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "is_rule_evaluated",
+   "fieldtype": "Check",
+   "label": "Is Rule Evaluated",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "matched_transaction_rule",
+   "fieldtype": "Link",
+   "label": "Matched Transaction Rule",
+   "options": "Bank Transaction Rule",
+   "read_only": 1
   }
  ],
+ "grid_page_length": 50,
+ "icon": "arrow-left-right",
  "is_submittable": 1,
  "links": [],
- "modified": "2021-04-14 17:31:58.963529",
+ "modified": "2026-04-11 20:41:15.124085",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Bank Transaction",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -240,8 +331,10 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "date",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "bank_account",
  "track_changes": 1
 }

@@ -1,7 +1,8 @@
 {
- "actions": "",
+ "actions": [],
  "creation": "2017-02-17 13:07:35.686409",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/support-settings",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -37,9 +38,11 @@
   },
   {
    "default": "7",
+   "description": "Set this value to 0 to disable the feature.",
    "fieldname": "close_issue_after_days",
    "fieldtype": "Int",
-   "label": "Close Issue After Days"
+   "label": "Close Issue After Days",
+   "non_negative": 1
   },
   {
    "fieldname": "portal_sb",
@@ -135,35 +138,30 @@
    "default": "We're here to help",
    "fieldname": "greeting_title",
    "fieldtype": "Data",
-   "label": "Greeting Title",
-   "show_days": 1,
-   "show_seconds": 1
+   "label": "Greeting Title"
   },
   {
    "fieldname": "column_break_19",
-   "fieldtype": "Column Break",
-   "show_days": 1,
-   "show_seconds": 1
+   "fieldtype": "Column Break"
   },
   {
    "default": "Browse help topics",
    "fieldname": "greeting_subtitle",
    "fieldtype": "Data",
-   "label": "Greeting Subtitle",
-   "show_days": 1,
-   "show_seconds": 1
+   "label": "Greeting Subtitle"
   },
   {
    "fieldname": "greetings_section_section",
    "fieldtype": "Section Break",
-   "label": "Greetings Section",
-   "show_days": 1,
-   "show_seconds": 1
+   "label": "Greetings Section"
   }
  ],
+ "grid_page_length": 50,
+ "hide_toolbar": 0,
+ "icon": "settings",
  "issingle": 1,
  "links": [],
- "modified": "2021-10-14 13:08:38.473616",
+ "modified": "2026-03-16 16:33:45.859541",
  "modified_by": "Administrator",
  "module": "Support",
  "name": "Support Settings",
@@ -181,7 +179,9 @@
   }
  ],
  "quick_entry": 1,
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

@@ -4,7 +4,9 @@
  "allow_rename": 1,
  "autoname": "field:template_name",
  "creation": "2017-08-10 15:34:28.058054",
+ "description": "A set of payment terms to apply to invoices and orders.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/payment-terms-template",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -34,11 +36,13 @@
    "label": "Allocate Payment Based On Payment Terms"
   }
  ],
+ "icon": "calendar-clock",
  "links": [],
- "modified": "2020-04-01 15:35:18.112619",
+ "modified": "2026-09-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Terms Template",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -76,9 +80,50 @@
    "role": "Accounts Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "role": "HR Manager",
+   "select": 1
+  },
+  {
+   "role": "Purchase Master Manager",
+   "select": 1
+  },
+  {
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Maintenance Manager"
+  },
+  {
+   "read": 1,
+   "role": "Maintenance User"
+  },
+  {
+   "read": 1,
+   "role": "Purchase Manager"
+  },
+  {
+   "read": 1,
+   "role": "Purchase User"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales User"
+  },
+  {
+   "read": 1,
+   "role": "Manufacturing Manager"
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

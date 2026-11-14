@@ -1,9 +1,8 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
-import unittest
+from erpnext.tests.utils import ERPNextTestSuite
 
-# test_records = frappe.get_test_records('Manufacturer')
 
-class TestManufacturer(unittest.TestCase):
+class TestManufacturer(ERPNextTestSuite):
 	pass

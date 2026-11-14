@@ -4,8 +4,11 @@
  "allow_rename": 1,
  "autoname": "field:customer_group_name",
  "creation": "2013-01-10 16:34:23",
+ "default_view": "Tree",
+ "description": "Groups customers, for pricing and reporting.",
  "doctype": "DocType",
  "document_type": "Setup",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/customer-group",
  "engine": "InnoDB",
  "field_order": [
   "customer_group_name",
@@ -39,6 +42,7 @@
    "fieldname": "parent_customer_group",
    "fieldtype": "Link",
    "ignore_user_permissions": 1,
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Parent Customer Group",
    "oldfieldname": "parent_customer_group",
@@ -51,6 +55,7 @@
    "description": "Only leaf nodes are allowed in transaction",
    "fieldname": "is_group",
    "fieldtype": "Check",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Is Group",
    "oldfieldname": "is_group",
@@ -64,12 +69,14 @@
    "fieldname": "default_price_list",
    "fieldtype": "Link",
    "ignore_user_permissions": 1,
+   "in_import_template": 1,
    "label": "Default Price List",
    "options": "Price List"
   },
   {
    "fieldname": "payment_terms",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "label": "Default Payment Terms Template",
    "options": "Payment Terms Template"
   },
@@ -113,7 +120,7 @@
   {
    "fieldname": "default_receivable_account",
    "fieldtype": "Section Break",
-   "label": "Default Receivable Account"
+   "label": "Default Accounts"
   },
   {
    "depends_on": "eval:!doc.__islocal",
@@ -131,18 +138,19 @@
   {
    "fieldname": "credit_limits",
    "fieldtype": "Table",
-   "label": "Credit Limit",
+   "label": "Credit & Overdue Limits",
    "options": "Customer Credit Limit"
   }
  ],
- "icon": "fa fa-sitemap",
+ "icon": "users",
  "idx": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2021-02-08 17:01:52.162202",
+ "modified": "2026-08-21 23:11:41.519748",
  "modified_by": "Administrator",
  "module": "Setup",
  "name": "Customer Group",
+ "naming_rule": "By fieldname",
  "nsm_parent_field": "parent_customer_group",
  "owner": "Administrator",
  "permissions": [
@@ -170,7 +178,6 @@
    "read": 1,
    "report": 1,
    "role": "Sales Master Manager",
-   "set_user_permissions": 1,
    "share": 1,
    "write": 1
   },
@@ -198,10 +205,41 @@
    "role": "Customer",
    "select": 1,
    "share": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1
+  },
+  {
+   "role": "Item Manager",
+   "select": 1
+  },
+  {
+   "role": "Maintenance Manager",
+   "select": 1
+  },
+  {
+   "role": "Maintenance User",
+   "select": 1
+  },
+  {
+   "role": "Purchase Manager",
+   "select": 1
+  },
+  {
+   "role": "Website Manager",
+   "select": 1
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "parent_customer_group",
  "show_name_in_global_search": 1,
- "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "translated_doctype": 1
 }

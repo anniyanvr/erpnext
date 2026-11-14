@@ -4,11 +4,22 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder import DocType
+from frappe.query_builder.functions import GroupConcat
+from frappe.utils.nestedset import get_descendants_of
+
+from erpnext.accounts.report.utils import validate_date_range
+
+Opportunity = DocType("Opportunity")
+OpportunityLostReasonDetail = DocType("Opportunity Lost Reason Detail")
 
 
 def execute(filters=None):
+	validate_date_range(filters)
+
 	columns, data = get_columns(), get_data(filters)
 	return columns, data
+
 
 def get_columns():
 	columns = [
@@ -24,109 +35,102 @@ def get_columns():
 			"fieldname": "opportunity_from",
 			"fieldtype": "Link",
 			"options": "DocType",
-			"width": 130
+			"width": 130,
 		},
 		{
 			"label": _("Party"),
-			"fieldname":"party_name",
+			"fieldname": "party_name",
 			"fieldtype": "Dynamic Link",
 			"options": "opportunity_from",
-			"width": 160
+			"width": 160,
 		},
 		{
 			"label": _("Customer/Lead Name"),
-			"fieldname":"customer_name",
+			"fieldname": "customer_name",
 			"fieldtype": "Data",
-			"width": 150
+			"width": 150,
 		},
 		{
 			"label": _("Opportunity Type"),
 			"fieldname": "opportunity_type",
 			"fieldtype": "Data",
-			"width": 130
+			"width": 130,
 		},
-		{
-			"label": _("Lost Reasons"),
-			"fieldname": "lost_reason",
-			"fieldtype": "Data",
-			"width": 220
-		},
+		{"label": _("Lost Reasons"), "fieldname": "lost_reason", "fieldtype": "Data", "width": 220},
 		{
 			"label": _("Sales Stage"),
 			"fieldname": "sales_stage",
 			"fieldtype": "Link",
 			"options": "Sales Stage",
-			"width": 150
+			"width": 150,
 		},
 		{
 			"label": _("Territory"),
 			"fieldname": "territory",
 			"fieldtype": "Link",
 			"options": "Territory",
-			"width": 150
+			"width": 150,
 		},
-		{
-			"label": _("Next Contact By"),
-			"fieldname": "contact_by",
-			"fieldtype": "Link",
-			"options": "User",
-			"width": 150
-		}
 	]
 	return columns
 
+
 def get_data(filters):
-	return frappe.db.sql("""
-		SELECT
-			`tabOpportunity`.name,
-			`tabOpportunity`.opportunity_from,
-			`tabOpportunity`.party_name,
-			`tabOpportunity`.customer_name,
-			`tabOpportunity`.opportunity_type,
-			`tabOpportunity`.contact_by,
-			GROUP_CONCAT(`tabOpportunity Lost Reason Detail`.lost_reason separator ', ') lost_reason,
-			`tabOpportunity`.sales_stage,
-			`tabOpportunity`.territory
-		FROM
-			`tabOpportunity`
-			{join}
-		WHERE
-			`tabOpportunity`.status = 'Lost' and `tabOpportunity`.company = %(company)s
-			AND `tabOpportunity`.modified BETWEEN %(from_date)s AND %(to_date)s
-			{conditions}
-		GROUP BY
-			`tabOpportunity`.name
-		ORDER BY
-			`tabOpportunity`.creation asc  """.format(conditions=get_conditions(filters), join=get_join(filters)), filters, as_dict=1)
+	# db-aware GROUP_CONCAT (MariaDB) / STRING_AGG (postgres) with a ", " separator
+	lost_reasons = GroupConcat(OpportunityLostReasonDetail.lost_reason, ", ", alias="lost_reason")
+
+	query = (
+		frappe.qb.from_(Opportunity)
+		.left_join(OpportunityLostReasonDetail)
+		.on(
+			(OpportunityLostReasonDetail.parenttype == "Opportunity")
+			& (OpportunityLostReasonDetail.parent == Opportunity.name)
+		)
+		.select(
+			Opportunity.name,
+			Opportunity.opportunity_from,
+			Opportunity.party_name,
+			Opportunity.customer_name,
+			Opportunity.opportunity_type,
+			lost_reasons,
+			Opportunity.sales_stage,
+			Opportunity.territory,
+		)
+		.where(
+			(Opportunity.status == "Lost")
+			& (Opportunity.company == filters.get("company"))
+			& (Opportunity.lost_on.between(filters.get("from_date"), filters.get("to_date")))
+		)
+		.groupby(Opportunity.name)
+		.orderby(Opportunity.creation)
+	)
+
+	query = get_conditions(filters, query)
+
+	return query.run(as_dict=1)
 
 
-def get_conditions(filters):
-	conditions = []
-
+def get_conditions(filters, query):
 	if filters.get("territory"):
-		conditions.append(" and `tabOpportunity`.territory=%(territory)s")
+		territories = [filters.get("territory"), *get_descendants_of("Territory", filters.get("territory"))]
+		query = query.where(Opportunity.territory.isin(territories))
 
 	if filters.get("opportunity_from"):
-		conditions.append(" and `tabOpportunity`.opportunity_from=%(opportunity_from)s")
+		query = query.where(Opportunity.opportunity_from == filters.get("opportunity_from"))
 
 	if filters.get("party_name"):
-		conditions.append(" and `tabOpportunity`.party_name=%(party_name)s")
-
-	if filters.get("contact_by"):
-		conditions.append(" and `tabOpportunity`.contact_by=%(contact_by)s")
-
-	return " ".join(conditions) if conditions else ""
-
-def get_join(filters):
-	join = """LEFT JOIN `tabOpportunity Lost Reason Detail`
-			ON `tabOpportunity Lost Reason Detail`.parenttype = 'Opportunity' and
-			`tabOpportunity Lost Reason Detail`.parent = `tabOpportunity`.name"""
+		query = query.where(Opportunity.party_name == filters.get("party_name"))
 
 	if filters.get("lost_reason"):
-		join = """JOIN `tabOpportunity Lost Reason Detail`
-			ON `tabOpportunity Lost Reason Detail`.parenttype = 'Opportunity' and
-			`tabOpportunity Lost Reason Detail`.parent = `tabOpportunity`.name and
-			`tabOpportunity Lost Reason Detail`.lost_reason = '{0}'
-			""".format(filters.get("lost_reason"))
+		query = query.where(
+			Opportunity.name.isin(
+				frappe.qb.from_(OpportunityLostReasonDetail)
+				.select(OpportunityLostReasonDetail.parent)
+				.where(
+					(OpportunityLostReasonDetail.parenttype == "Opportunity")
+					& (OpportunityLostReasonDetail.lost_reason == filters.get("lost_reason"))
+				)
+			)
+		)
 
-	return join
+	return query

@@ -1,8 +1,12 @@
 {
+ "actions": [],
+ "allow_bulk_edit": 1,
  "allow_import": 1,
  "autoname": "ACC-INV-DISC-.YYYY.-.#####",
  "creation": "2019-03-07 12:01:56.296952",
+ "description": "Raise money against unpaid sales invoices.",
  "doctype": "DocType",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/invoice_discounting",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
@@ -167,8 +171,10 @@
    "read_only": 1
   }
  ],
+ "icon": "ticket-percent",
  "is_submittable": 1,
- "modified": "2019-05-30 19:08:21.199759",
+ "links": [],
+ "modified": "2026-09-09 17:04:59.512294",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Invoice Discounting",
@@ -185,13 +191,15 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "System Manager",
+   "role": "Accounts Manager",
    "share": 1,
    "submit": 1,
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

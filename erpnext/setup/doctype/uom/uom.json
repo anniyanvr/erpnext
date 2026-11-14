@@ -4,12 +4,19 @@
  "allow_rename": 1,
  "autoname": "field:uom_name",
  "creation": "2013-01-10 16:34:24",
+ "description": "A unit you measure items in, like kg or box.",
  "doctype": "DocType",
  "document_type": "Setup",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/uom",
  "engine": "InnoDB",
  "field_order": [
-  "enabled",
   "uom_name",
+  "symbol",
+  "common_code",
+  "description",
+  "column_break_obth",
+  "category",
+  "enabled",
   "must_be_whole_number"
  ],
  "fields": [
@@ -28,6 +35,7 @@
    "description": "Check this to disallow fractions. (for Nos)",
    "fieldname": "must_be_whole_number",
    "fieldtype": "Check",
+   "in_import_template": 1,
    "label": "Must be Whole Number"
   },
   {
@@ -35,12 +43,42 @@
    "fieldname": "enabled",
    "fieldtype": "Check",
    "label": "Enabled"
+  },
+  {
+   "fieldname": "symbol",
+   "fieldtype": "Data",
+   "label": "Symbol"
+  },
+  {
+   "description": "According to CEFACT/ICG/2010/IC013 or CEFACT/ICG/2010/IC010",
+   "fieldname": "common_code",
+   "fieldtype": "Data",
+   "label": "Common Code",
+   "length": 3
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "column_break_obth",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category",
+   "options": "UOM Category"
   }
  ],
- "icon": "fa fa-compass",
+ "icon": "ruler",
  "idx": 1,
  "links": [],
- "modified": "2021-10-18 14:07:43.722144",
+ "modified": "2026-08-21 23:11:51.629905",
  "modified_by": "Administrator",
  "module": "Setup",
  "name": "UOM",
@@ -73,10 +111,35 @@
    "read": 1,
    "report": 1,
    "role": "Stock User"
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1
+  },
+  {
+   "role": "Desk User",
+   "select": 1
   }
  ],
  "quick_entry": 1,
+ "row_format": "Dynamic",
  "show_name_in_global_search": 1,
- "sort_field": "modified",
- "sort_order": "ASC"
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": [],
+ "translated_doctype": 1
 }

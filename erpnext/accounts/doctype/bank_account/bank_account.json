@@ -3,8 +3,10 @@
  "allow_import": 1,
  "allow_rename": 1,
  "creation": "2017-05-29 21:35:13.136357",
+ "description": "A bank account of yours or of a customer or supplier.",
  "doctype": "DocType",
  "document_type": "Setup",
+ "documentation": "https://docs.frappe.io/erpnext/user/manual/en/bank-account",
  "engine": "InnoDB",
  "field_order": [
   "account_name",
@@ -13,9 +15,11 @@
   "account_type",
   "account_subtype",
   "column_break_7",
+  "disabled",
   "is_default",
   "is_company_account",
   "company",
+  "is_credit_card",
   "section_break_11",
   "party_type",
   "column_break_14",
@@ -25,9 +29,9 @@
   "column_break_12",
   "branch_code",
   "bank_account_no",
+  "statement_password",
   "address_and_contact",
   "address_html",
-  "website",
   "column_break_13",
   "contact_html",
   "integration_details_section",
@@ -50,8 +54,10 @@
    "depends_on": "is_company_account",
    "fieldname": "account",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Company Account",
+   "mandatory_depends_on": "is_company_account",
    "options": "Account"
   },
   {
@@ -64,6 +70,7 @@
   {
    "fieldname": "account_type",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "label": "Account Type",
    "options": "Bank Account Type"
   },
@@ -89,15 +96,18 @@
    "description": "Setting the account as a Company Account is necessary for Bank Reconciliation",
    "fieldname": "is_company_account",
    "fieldtype": "Check",
+   "in_import_template": 1,
    "label": "Is Company Account"
   },
   {
    "depends_on": "is_company_account",
    "fieldname": "company",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Company",
+   "mandatory_depends_on": "is_company_account",
    "options": "Company"
   },
   {
@@ -109,6 +119,7 @@
   {
    "fieldname": "party_type",
    "fieldtype": "Link",
+   "in_import_template": 1,
    "label": "Party Type",
    "options": "DocType"
   },
@@ -119,6 +130,7 @@
   {
    "fieldname": "party",
    "fieldtype": "Dynamic Link",
+   "in_import_template": 1,
    "label": "Party",
    "options": "party_type"
   },
@@ -130,9 +142,11 @@
   {
    "fieldname": "iban",
    "fieldtype": "Data",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "IBAN",
-   "length": 30
+   "length": 34,
+   "options": "IBAN"
   },
   {
    "fieldname": "column_break_12",
@@ -141,9 +155,16 @@
   {
    "fieldname": "bank_account_no",
    "fieldtype": "Data",
+   "in_import_template": 1,
    "in_list_view": 1,
    "label": "Bank Account No",
    "length": 30
+  },
+  {
+   "description": "Password used to open password-protected PDF statements for this account. Stored encrypted.",
+   "fieldname": "statement_password",
+   "fieldtype": "Password",
+   "label": "Statement PDF Password"
   },
   {
    "fieldname": "address_and_contact",
@@ -155,11 +176,6 @@
    "fieldname": "address_html",
    "fieldtype": "HTML",
    "label": "Address HTML"
-  },
-  {
-   "fieldname": "website",
-   "fieldtype": "Data",
-   "label": "Website"
   },
   {
    "fieldname": "column_break_13",
@@ -204,11 +220,68 @@
    "fieldname": "branch_code",
    "fieldtype": "Data",
    "in_global_search": 1,
+   "in_import_template": 1,
    "label": "Branch Code"
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "default": "0",
+   "description": "If checked, journal entries made using bank reconciliation will be of type \"Credit Card Entry\"",
+   "fieldname": "is_credit_card",
+   "fieldtype": "Check",
+   "label": "Is Credit Card"
   }
  ],
- "links": [],
- "modified": "2020-10-23 16:48:06.303658",
+ "grid_page_length": 50,
+ "icon": "credit-card",
+ "links": [
+  {
+   "group": "Transactions",
+   "link_doctype": "Payment Request",
+   "link_fieldname": "bank_account"
+  },
+  {
+   "group": "Transactions",
+   "link_doctype": "Payment Order",
+   "link_fieldname": "bank_account"
+  },
+  {
+   "group": "Transactions",
+   "link_doctype": "Bank Guarantee",
+   "link_fieldname": "bank_account"
+  },
+  {
+   "group": "Transactions",
+   "link_doctype": "Bank Transaction",
+   "link_fieldname": "bank_account"
+  },
+  {
+   "group": "Accounting",
+   "link_doctype": "Payment Entry",
+   "link_fieldname": "bank_account"
+  },
+  {
+   "group": "Accounting",
+   "link_doctype": "Journal Entry",
+   "link_fieldname": "bank_account"
+  },
+  {
+   "group": "Party",
+   "link_doctype": "Customer",
+   "link_fieldname": "default_bank_account"
+  },
+  {
+   "group": "Party",
+   "link_doctype": "Supplier",
+   "link_fieldname": "default_bank_account"
+  }
+ ],
+ "modified": "2026-08-21 23:11:39.585456",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Bank Account",
@@ -238,10 +311,28 @@
    "role": "Accounts User",
    "share": 1,
    "write": 1
+  },
+  {
+   "role": "Purchase Manager",
+   "select": 1
+  },
+  {
+   "role": "Purchase Master Manager",
+   "select": 1
+  },
+  {
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "role": "Sales User",
+   "select": 1
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "bank,account",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

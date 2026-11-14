@@ -1,7 +1,8 @@
 {
  "actions": [],
  "autoname": "field:id",
- "creation": "2019-06-05 12:07:02.634534",
+ "creation": "2022-02-21 11:54:58.414784",
+ "description": "A phone call made or received.",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -9,6 +10,8 @@
   "id",
   "from",
   "to",
+  "call_received_by",
+  "employee_user_id",
   "medium",
   "start_time",
   "end_time",
@@ -20,6 +23,7 @@
   "recording_url",
   "recording_html",
   "section_break_11",
+  "type_of_call",
   "summary",
   "section_break_19",
   "links"
@@ -51,7 +55,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Ringing\nIn Progress\nCompleted\nFailed\nBusy\nNo Answer\nQueued\nCanceled",
+   "options": "Ringing\nIn Progress\nCompleted\nFailed\nBusy\nNo Answer\nQueued\nCancelled",
    "read_only": 1
   },
   {
@@ -103,7 +107,8 @@
   },
   {
    "fieldname": "summary",
-   "fieldtype": "Small Text"
+   "fieldtype": "Small Text",
+   "label": "Summary"
   },
   {
    "fieldname": "section_break_11",
@@ -134,15 +139,38 @@
    "fieldname": "call_details_section",
    "fieldtype": "Section Break",
    "label": "Call Details"
+  },
+  {
+   "fieldname": "employee_user_id",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Employee User Id",
+   "options": "User"
+  },
+  {
+   "fieldname": "type_of_call",
+   "fieldtype": "Link",
+   "label": "Type Of Call",
+   "options": "Telephony Call Type"
+  },
+  {
+   "depends_on": "to",
+   "fieldname": "call_received_by",
+   "fieldtype": "Link",
+   "label": "Call Received By",
+   "options": "Employee",
+   "read_only": 1
   }
  ],
+ "icon": "phone",
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2021-02-08 14:23:28.744844",
+ "modified": "2025-12-29 10:37:26.183502",
  "modified_by": "Administrator",
  "module": "Telephony",
  "name": "Call Log",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -162,8 +190,10 @@
    "role": "Employee"
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "from",
  "track_changes": 1,
  "track_views": 1
